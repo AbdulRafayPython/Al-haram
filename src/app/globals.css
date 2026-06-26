@@ -1,26 +1,108 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ------------------------------------------------------------------ *
+ * Haram Gateway Express — Design System
+ * Sacred Green + Burnished Gold, Playfair Display + Manrope
+ * Tokens sourced from stitch_premium_production_ui_redesign/DESIGN.md
+ * ------------------------------------------------------------------ */
+
+@theme {
+  /* Brand surfaces */
+  --color-background: #fcf9f8;
+  --color-surface: #fcf9f8;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f6f3f2;
+  --color-surface-container: #f0eded;
+  --color-surface-container-high: #eae7e7;
+  --color-surface-variant: #e4e2e1;
+
+  /* Primary — Sacred Green */
+  --color-primary: #061b0e;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #1b3022;
+  --color-on-primary-container: #819986;
+  --color-primary-fixed: #d0e9d4;
+  --color-primary-fixed-dim: #b4cdb8;
+
+  /* Secondary — Burnished Gold */
+  --color-secondary: #775a19;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #fed488;
+  --color-on-secondary-container: #785a1a;
+  --color-secondary-fixed: #ffdea5;
+  --color-secondary-fixed-dim: #e9c176;
+  --color-on-secondary-fixed: #261900;
+
+  /* Tertiary — Cream / Charcoal */
+  --color-tertiary: #171815;
+  --color-tertiary-fixed: #e5e2dd;
+  --color-tertiary-container: #2c2c29;
+  --color-on-tertiary: #f3f0f0;
+
+  /* Text & lines */
+  --color-on-surface: #1b1c1c;
+  --color-on-surface-variant: #434843;
+  --color-outline: #737973;
+  --color-outline-variant: #c3c8c1;
+
+  /* Status */
+  --color-error: #ba1a1a;
+  --color-success: #1b7340;
+  --color-whatsapp: #25d366;
+
+  /* Typography */
+  --font-heading: var(--font-playfair), Georgia, serif;
+  --font-body: var(--font-manrope), system-ui, sans-serif;
+
+  /* Layout rhythm */
+  --spacing-gutter: 24px;
+  --spacing-section: 96px;
+
+  /* Radius — soft, tailored */
+  --radius-sm: 0.125rem;
+  --radius: 0.25rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  body {
+    background-color: var(--color-background);
+    color: var(--color-on-surface);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5 {
+    font-family: var(--font-heading);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Material Symbols defaults */
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  vertical-align: middle;
+  user-select: none;
+}
+
+/* Reveal-on-scroll utility (progressively enhanced by JS) */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
