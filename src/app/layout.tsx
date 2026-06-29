@@ -1,20 +1,27 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Manrope } from "next/font/google";
+import { Jost, Rubik, Satisfy } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { WhatsAppButton } from "@/components/layout/WhatsAppButton";
 import { site } from "@/data/site";
 
-const playfair = Playfair_Display({
+const jost = Jost({
   subsets: ["latin"],
-  variable: "--font-playfair",
+  variable: "--font-jost",
   display: "swap",
 });
 
-const manrope = Manrope({
+const rubik = Rubik({
   subsets: ["latin"],
-  variable: "--font-manrope",
+  variable: "--font-rubik",
+  display: "swap",
+});
+
+const satisfy = Satisfy({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-satisfy",
   display: "swap",
 });
 
@@ -30,7 +37,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${playfair.variable} ${manrope.variable}`}>
+    <html lang="en" className={`${jost.variable} ${rubik.variable} ${satisfy.variable}`}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
@@ -47,7 +54,7 @@ export default function RootLayout({
       </head>
       <body className="flex min-h-screen flex-col">
         <Navbar />
-        <main className="flex-1 pt-[72px]">{children}</main>
+        <main className="flex-1">{children}</main>
         <Footer />
         <WhatsAppButton />
       </body>

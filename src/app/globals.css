@@ -2,48 +2,48 @@
 
 /* ------------------------------------------------------------------ *
  * Haram Gateway Express — Design System
- * Sacred Green + Burnished Gold, Playfair Display + Manrope
- * Tokens sourced from stitch_premium_production_ui_redesign/DESIGN.md
+ * Matched to the live site: Deep Navy + Burnished Gold, Jost + Rubik.
+ * Semantic tokens keep component code stable across re-themes.
  * ------------------------------------------------------------------ */
 
 @theme {
-  /* Brand surfaces */
-  --color-background: #fcf9f8;
-  --color-surface: #fcf9f8;
+  /* Light surfaces */
+  --color-background: #ffffff;
+  --color-surface: #ffffff;
   --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f6f3f2;
-  --color-surface-container: #f0eded;
-  --color-surface-container-high: #eae7e7;
-  --color-surface-variant: #e4e2e1;
+  --color-surface-container-low: #f7f4ee;
+  --color-surface-container: #f0ebe2;
+  --color-surface-container-high: #e9e3d8;
+  --color-surface-variant: #e6e0d4;
 
-  /* Primary — Sacred Green */
-  --color-primary: #061b0e;
+  /* Primary — Deep Navy (hero panels, board cards, buttons) */
+  --color-primary: #16243f;
   --color-on-primary: #ffffff;
-  --color-primary-container: #1b3022;
-  --color-on-primary-container: #819986;
-  --color-primary-fixed: #d0e9d4;
-  --color-primary-fixed-dim: #b4cdb8;
+  --color-primary-container: #213257;
+  --color-on-primary-container: #b9c2d6;
+  --color-primary-fixed: #d7deea;
+  --color-primary-fixed-dim: #aab5cb;
 
   /* Secondary — Burnished Gold */
-  --color-secondary: #775a19;
+  --color-secondary: #b07d12;          /* gold text / icons on light */
   --color-on-secondary: #ffffff;
-  --color-secondary-container: #fed488;
-  --color-on-secondary-container: #785a1a;
-  --color-secondary-fixed: #ffdea5;
-  --color-secondary-fixed-dim: #e9c176;
-  --color-on-secondary-fixed: #261900;
+  --color-secondary-container: #fce8bd; /* soft gold tint */
+  --color-on-secondary-container: #6b4e09;
+  --color-secondary-fixed: #f2b21e;     /* bright gold buttons */
+  --color-secondary-fixed-dim: #e0a216;
+  --color-on-secondary-fixed: #16243f;  /* navy text on gold */
 
-  /* Tertiary — Cream / Charcoal */
-  --color-tertiary: #171815;
-  --color-tertiary-fixed: #e5e2dd;
-  --color-tertiary-container: #2c2c29;
-  --color-on-tertiary: #f3f0f0;
+  /* Tertiary — near-black footer + cream sections */
+  --color-tertiary: #14140f;
+  --color-tertiary-fixed: #f1ece4;
+  --color-tertiary-container: #20201a;
+  --color-on-tertiary: #e7e4dc;
 
   /* Text & lines */
-  --color-on-surface: #1b1c1c;
-  --color-on-surface-variant: #434843;
-  --color-outline: #737973;
-  --color-outline-variant: #c3c8c1;
+  --color-on-surface: #16243f;
+  --color-on-surface-variant: #5b6473;
+  --color-outline: #8b909a;
+  --color-outline-variant: #e0dccf;
 
   /* Status */
   --color-error: #ba1a1a;
@@ -51,18 +51,19 @@
   --color-whatsapp: #25d366;
 
   /* Typography */
-  --font-heading: var(--font-playfair), Georgia, serif;
-  --font-body: var(--font-manrope), system-ui, sans-serif;
+  --font-heading: var(--font-rubik), system-ui, sans-serif;
+  --font-body: var(--font-jost), system-ui, sans-serif;
+  --font-script: var(--font-satisfy), cursive;
 
   /* Layout rhythm */
   --spacing-gutter: 24px;
   --spacing-section: 96px;
 
-  /* Radius — soft, tailored */
-  --radius-sm: 0.125rem;
-  --radius: 0.25rem;
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
+  /* Radius */
+  --radius-sm: 0.25rem;
+  --radius: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
 }
 
 @layer base {
@@ -77,8 +78,10 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  h1, h2, h3, h4, h5 {
+  h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
+    font-weight: 700;
+    letter-spacing: -0.01em;
   }
 }
 
@@ -89,7 +92,7 @@
   user-select: none;
 }
 
-/* Reveal-on-scroll utility (progressively enhanced by JS) */
+/* Reveal-on-scroll utility */
 .reveal {
   opacity: 0;
   transform: translateY(24px);
