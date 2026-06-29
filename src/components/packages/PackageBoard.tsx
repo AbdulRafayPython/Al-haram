@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { PackageCard } from "@/components/packages/PackageCard";
+import { DepartureCalendar } from "@/components/packages/DepartureCalendar";
 import { clsx } from "@/lib/clsx";
+import { formatDate } from "@/lib/format";
 import { departureCities, airlines } from "@/data/packages";
 import type { UmrahPackage } from "@/data/types";
 
@@ -15,15 +17,31 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
   const [duration, setDuration] = useState("all");
   const [availableOnly, setAvailableOnly] = useState(false);
   const [sort, setSort] = useState<"date" | "price-asc" | "price-desc">("date");
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [highlight, setHighlight] = useState(false);
+
+  const resultsRef = useRef<HTMLDivElement>(null);
+
+  // Everything except the calendar's date filter — also feeds the calendar's
+  // per-day seat counts so they stay in sync with the dropdown filters.
+  const baseFiltered = useMemo(
+    () =>
+      packages.filter((p) => {
+        if (city !== "all" && p.departureCityCode !== city) return false;
+        if (airline !== "all" && p.airline !== airline) return false;
+        if (duration !== "all" && p.durationDays !== Number(duration)) return false;
+        if (availableOnly && p.seatsAvailable === 0) return false;
+        return true;
+      }),
+    [packages, city, airline, duration, availableOnly],
+  );
 
   const filtered = useMemo(() => {
-    const result = packages.filter((p) => {
-      if (city !== "all" && p.departureCityCode !== city) return false;
-      if (airline !== "all" && p.airline !== airline) return false;
-      if (duration !== "all" && p.durationDays !== Number(duration)) return false;
-      if (availableOnly && p.seatsAvailable === 0) return false;
-      return true;
-    });
+    const result = (
+      selectedDate
+        ? baseFiltered.filter((p) => p.departureDate === selectedDate)
+        : baseFiltered
+    ).slice();
 
     result.sort((a, b) => {
       if (sort === "price-asc") return a.pricePkr - b.pricePkr;
@@ -31,7 +49,30 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
       return +new Date(a.departureDate) - +new Date(b.departureDate);
     });
     return result;
-  }, [packages, city, airline, duration, availableOnly, sort]);
+  }, [baseFiltered, selectedDate, sort]);
+
+  // When a calendar day is picked, bring the matching cards into view so the
+  // user never has to hunt for where the results appeared.
+  useEffect(() => {
+    if (!selectedDate || !resultsRef.current) return;
+
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    resultsRef.current.scrollIntoView({
+      behavior: reduceMotion ? "auto" : "smooth",
+      block: "start",
+    });
+
+    setHighlight(true);
+    const timer = window.setTimeout(() => setHighlight(false), 1400);
+    return () => window.clearTimeout(timer);
+  }, [selectedDate]);
+
+  const handleSelectDate = (date: string) => {
+    setSelectedDate((prev) => (prev === date ? null : date));
+  };
 
   const reset = () => {
     setCity("all");
@@ -39,10 +80,15 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
     setDuration("all");
     setAvailableOnly(false);
     setSort("date");
+    setSelectedDate(null);
   };
 
   const hasFilters =
-    city !== "all" || airline !== "all" || duration !== "all" || availableOnly;
+    city !== "all" ||
+    airline !== "all" ||
+    duration !== "all" ||
+    availableOnly ||
+    selectedDate !== null;
 
   return (
     <div>
@@ -109,35 +155,102 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
         </div>
       </div>
 
-      {/* Results */}
-      <p className="mt-6 text-sm text-on-surface-variant">
-        Showing <span className="font-semibold text-primary">{filtered.length}</span>{" "}
-        of {packages.length} departures
-      </p>
+      {/* Departure calendar */}
+      <div className="mt-8">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h3 className="font-[var(--font-heading)] text-xl text-primary md:text-2xl">
+              Departure Calendar
+            </h3>
+            <p className="mt-1 text-sm text-on-surface-variant">
+              Tap any highlighted day — we&rsquo;ll jump you straight to its
+              packages below.
+            </p>
+          </div>
+          <span className="inline-flex items-center gap-3 text-xs text-on-surface-variant">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-sm border border-secondary/40 bg-secondary-container" />
+              Seats open
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-sm border border-outline-variant bg-surface-container" />
+              Sold out
+            </span>
+          </span>
+        </div>
 
-      {filtered.length > 0 ? (
-        <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((pkg) => (
-            <PackageCard key={pkg.id} pkg={pkg} />
-          ))}
+        <div className="mt-5">
+          <DepartureCalendar
+            packages={baseFiltered}
+            selectedDate={selectedDate}
+            onSelect={handleSelectDate}
+          />
         </div>
-      ) : (
-        <div className="mt-4 flex flex-col items-center rounded-xl border border-dashed border-outline-variant bg-surface-container-low p-16 text-center">
-          <Icon name="search_off" className="text-5xl text-on-surface-variant" />
-          <p className="mt-4 font-[var(--font-heading)] text-xl text-primary">
-            No matching departures
-          </p>
-          <p className="mt-1 text-sm text-on-surface-variant">
-            Try widening your filters or reset to see everything.
-          </p>
-          <button
-            onClick={reset}
-            className="mt-5 inline-flex items-center gap-1 rounded-lg bg-primary px-5 py-2.5 text-xs font-semibold uppercase tracking-widest text-on-primary"
+      </div>
+
+      {/* Results */}
+      <div ref={resultsRef} className="mt-12 scroll-mt-28">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {selectedDate ? (
+            <span className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-on-primary">
+              <Icon name="event" className="text-base text-secondary-fixed" />
+              Departures on {formatDate(selectedDate)}
+              <button
+                onClick={() => setSelectedDate(null)}
+                aria-label="Clear selected date"
+                className="-mr-1 ml-1 inline-flex items-center rounded-full p-0.5 transition-colors hover:bg-on-primary/15"
+              >
+                <Icon name="close" className="text-base" />
+              </button>
+            </span>
+          ) : (
+            <p className="text-sm text-on-surface-variant">
+              Showing{" "}
+              <span className="font-semibold text-primary">{filtered.length}</span> of{" "}
+              {packages.length} departures
+            </p>
+          )}
+
+          {selectedDate && (
+            <p className="text-sm text-on-surface-variant">
+              <span className="font-semibold text-primary">{filtered.length}</span>{" "}
+              package{filtered.length === 1 ? "" : "s"} on this date
+            </p>
+          )}
+        </div>
+
+        {filtered.length > 0 ? (
+          <div
+            className={clsx(
+              "mt-5 grid grid-cols-1 gap-6 rounded-2xl p-1 md:grid-cols-2 lg:grid-cols-3",
+              "transition-shadow duration-700",
+              highlight && "shadow-[0_0_0_3px_var(--color-secondary-fixed)]",
+            )}
           >
-            Reset filters
-          </button>
-        </div>
-      )}
+            {filtered.map((pkg) => (
+              <PackageCard key={pkg.id} pkg={pkg} />
+            ))}
+          </div>
+        ) : (
+          <div className="mt-5 flex flex-col items-center rounded-xl border border-dashed border-outline-variant bg-surface-container-low p-16 text-center">
+            <Icon name="search_off" className="text-5xl text-on-surface-variant" />
+            <p className="mt-4 font-[var(--font-heading)] text-xl text-primary">
+              No matching departures
+            </p>
+            <p className="mt-1 text-sm text-on-surface-variant">
+              {selectedDate
+                ? "No packages on this date match your filters. Try clearing the date or widening your filters."
+                : "Try widening your filters or reset to see everything."}
+            </p>
+            <button
+              onClick={reset}
+              className="mt-5 inline-flex items-center gap-1 rounded-lg bg-primary px-5 py-2.5 text-xs font-semibold uppercase tracking-widest text-on-primary"
+            >
+              Reset filters
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
