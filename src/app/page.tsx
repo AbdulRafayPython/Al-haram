@@ -31,8 +31,15 @@ export default function UmrahPackagesPage() {
         compact
       />
 
+      {/* Board */}
+      <section className="py-6 md:py-8">
+        <Container>
+          <PackageBoard packages={packages} />
+        </Container>
+      </section>
+
       {/* Summary stats */}
-      <section className="border-b border-outline-variant/40 bg-surface-container-low py-4">
+      <section className="border-y border-outline-variant/40 bg-surface-container-low py-4">
         <Container>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {summary.map((s) => (
@@ -52,13 +59,6 @@ export default function UmrahPackagesPage() {
               </div>
             ))}
           </div>
-        </Container>
-      </section>
-
-      {/* Board */}
-      <section className="py-6 md:py-8">
-        <Container>
-          <PackageBoard packages={packages} />
         </Container>
       </section>
 
