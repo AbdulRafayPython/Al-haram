@@ -17,7 +17,7 @@ const variants: Record<Variant, string> = {
   secondary:
     "border border-secondary text-secondary hover:bg-secondary hover:text-on-secondary",
   gold: "bg-secondary-fixed text-on-secondary-fixed hover:brightness-105 shadow-sm",
-  ghost: "text-primary hover:bg-surface-container-low",
+  ghost: "text-on-surface hover:bg-surface-container-low",
 };
 
 interface CommonProps {

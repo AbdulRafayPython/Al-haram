@@ -27,6 +27,7 @@ export default function SaudiTransportPage() {
         title="Umrah Transport Rates"
         description="Airport and hotel transfers, Haramain railway connections, and ziyarat routes — select a vehicle to see live pricing."
         icon="airport_shuttle"
+        image="/images/transport.jpg"
       />
 
       <section className="border-b border-outline-variant/40 bg-surface-container-low py-10">
@@ -41,7 +42,7 @@ export default function SaudiTransportPage() {
                   <Icon name={s.icon} className="text-2xl text-secondary" />
                 </div>
                 <div>
-                  <p className="font-[var(--font-heading)] text-2xl text-primary">{s.value}</p>
+                  <p className="font-[var(--font-heading)] text-2xl text-on-surface">{s.value}</p>
                   <p className="text-xs uppercase tracking-wider text-on-surface-variant">
                     {s.label}
                   </p>

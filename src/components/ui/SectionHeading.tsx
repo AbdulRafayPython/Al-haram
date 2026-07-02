@@ -33,7 +33,7 @@ export function SectionHeading({
       <h2
         className={clsx(
           "text-3xl leading-tight md:text-4xl lg:text-5xl",
-          tone === "light" ? "text-on-primary" : "text-primary",
+          tone === "light" ? "text-on-primary" : "text-on-surface",
         )}
       >
         {title}

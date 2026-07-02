@@ -58,7 +58,7 @@ export function Navbar() {
               <Icon name="mosque" className="text-2xl" />
             </span>
             <span className="flex flex-col leading-none">
-              <span className="text-lg font-extrabold tracking-tight text-primary">
+              <span className="text-lg font-extrabold tracking-tight text-on-surface">
                 Haram Gateway
               </span>
               <span className="text-[0.6rem] font-semibold uppercase tracking-[0.35em] text-secondary">
@@ -77,7 +77,7 @@ export function Navbar() {
                   "text-sm font-medium uppercase tracking-wide transition-colors",
                   isActive(item.href)
                     ? "text-secondary"
-                    : "text-on-surface-variant hover:text-primary",
+                    : "text-on-surface-variant hover:text-on-surface",
                 )}
               >
                 {item.label}
@@ -97,7 +97,7 @@ export function Navbar() {
               aria-label="Toggle menu"
               aria-expanded={open}
               onClick={() => setOpen((v) => !v)}
-              className="inline-flex items-center justify-center rounded-lg p-2 text-primary lg:hidden"
+              className="inline-flex items-center justify-center rounded-lg p-2 text-on-surface lg:hidden"
             >
               <Icon name={open ? "close" : "menu"} className="text-3xl" />
             </button>

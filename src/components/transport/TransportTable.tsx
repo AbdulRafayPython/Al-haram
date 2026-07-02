@@ -41,7 +41,7 @@ export function TransportTable({ rates }: { rates: TransportRate[] }) {
                 vehicle === v.key ? "text-on-secondary-container" : "text-secondary",
               )}
             />
-            <span className="mt-2 text-sm font-semibold text-primary">{v.name}</span>
+            <span className="mt-2 text-sm font-semibold text-on-surface">{v.name}</span>
             <span className="text-xs text-on-surface-variant">{v.capacity}</span>
           </button>
         ))}
@@ -57,7 +57,7 @@ export function TransportTable({ rates }: { rates: TransportRate[] }) {
               "rounded-full px-5 py-2 text-sm font-semibold transition-colors",
               category === c
                 ? "bg-primary text-on-primary"
-                : "bg-surface-container text-on-surface-variant hover:text-primary",
+                : "bg-surface-container text-on-surface-variant hover:text-on-surface",
             )}
           >
             {c}
@@ -97,7 +97,7 @@ export function TransportTable({ rates }: { rates: TransportRate[] }) {
                       {r.category}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right font-[var(--font-heading)] text-lg text-primary">
+                  <td className="px-6 py-4 text-right font-[var(--font-heading)] text-lg text-on-surface">
                     {typeof price === "number" ? formatSar(price) : "On request"}
                   </td>
                 </tr>

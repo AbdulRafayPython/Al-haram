@@ -12,10 +12,29 @@ import type { UmrahPackage } from "@/data/types";
 const durations = [14, 21, 28];
 
 export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
-  const [city, setCity] = useState("all");
-  const [airline, setAirline] = useState("all");
-  const [duration, setDuration] = useState("all");
-  const [availableOnly, setAvailableOnly] = useState(false);
+  // Sold-out departures are never shown, so every filter operates on the
+  // available subset from the start.
+  const availablePackages = useMemo(
+    () => packages.filter((p) => p.seatsAvailable > 0),
+    [packages],
+  );
+
+  // With no "all" option on any dropdown, default every field to the
+  // soonest available departure so the board never opens on an empty result.
+  const defaults = useMemo(() => {
+    const earliest = [...availablePackages].sort(
+      (a, b) => +new Date(a.departureDate) - +new Date(b.departureDate),
+    )[0];
+    return {
+      city: earliest?.departureCityCode ?? departureCities[0].code,
+      airline: earliest?.airline ?? airlines[0],
+      duration: String(earliest?.durationDays ?? durations[0]),
+    };
+  }, [availablePackages]);
+
+  const [city, setCity] = useState(defaults.city);
+  const [airline, setAirline] = useState(defaults.airline);
+  const [duration, setDuration] = useState(defaults.duration);
   const [sort, setSort] = useState<"date" | "price-asc" | "price-desc">("date");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [highlight, setHighlight] = useState(false);
@@ -26,14 +45,13 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
   // per-day seat counts so they stay in sync with the dropdown filters.
   const baseFiltered = useMemo(
     () =>
-      packages.filter((p) => {
-        if (city !== "all" && p.departureCityCode !== city) return false;
-        if (airline !== "all" && p.airline !== airline) return false;
-        if (duration !== "all" && p.durationDays !== Number(duration)) return false;
-        if (availableOnly && p.seatsAvailable === 0) return false;
+      availablePackages.filter((p) => {
+        if (p.departureCityCode !== city) return false;
+        if (p.airline !== airline) return false;
+        if (p.durationDays !== Number(duration)) return false;
         return true;
       }),
-    [packages, city, airline, duration, availableOnly],
+    [availablePackages, city, airline, duration],
   );
 
   const filtered = useMemo(() => {
@@ -75,29 +93,26 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
   };
 
   const reset = () => {
-    setCity("all");
-    setAirline("all");
-    setDuration("all");
-    setAvailableOnly(false);
+    setCity(defaults.city);
+    setAirline(defaults.airline);
+    setDuration(defaults.duration);
     setSort("date");
     setSelectedDate(null);
   };
 
   const hasFilters =
-    city !== "all" ||
-    airline !== "all" ||
-    duration !== "all" ||
-    availableOnly ||
+    city !== defaults.city ||
+    airline !== defaults.airline ||
+    duration !== defaults.duration ||
     selectedDate !== null;
 
   return (
     <div>
-      {/* Filter bar */}
+      {/* Filters + departure calendar */}
       <div className="rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-5 shadow-sm">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Departure City">
             <Select value={city} onChange={setCity}>
-              <option value="all">All Cities</option>
               {departureCities.map((c) => (
                 <option key={c.code} value={c.code}>
                   {c.name} ({c.code})
@@ -107,7 +122,6 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
           </Field>
           <Field label="Airline">
             <Select value={airline} onChange={setAirline}>
-              <option value="all">All Airlines</option>
               {airlines.map((a) => (
                 <option key={a} value={a}>
                   {a}
@@ -117,7 +131,6 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
           </Field>
           <Field label="Duration">
             <Select value={duration} onChange={setDuration}>
-              <option value="all">Any Duration</option>
               {durations.map((d) => (
                 <option key={d} value={d}>
                   {d} days
@@ -134,62 +147,47 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
           </Field>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-outline-variant/40 pt-4">
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-on-surface-variant">
-            <input
-              type="checkbox"
-              checked={availableOnly}
-              onChange={(e) => setAvailableOnly(e.target.checked)}
-              className="h-4 w-4 accent-primary"
-            />
-            Show available seats only
-          </label>
-          {hasFilters && (
+        {hasFilters && (
+          <div className="mt-4 flex justify-end">
             <button
               onClick={reset}
               className="inline-flex items-center gap-1 text-sm font-semibold text-secondary hover:underline"
             >
               <Icon name="restart_alt" className="text-base" /> Reset filters
             </button>
-          )}
-        </div>
-      </div>
-
-      {/* Departure calendar */}
-      <div className="mt-8">
-        <div className="flex flex-wrap items-end justify-between gap-2">
-          <div>
-            <h3 className="font-[var(--font-heading)] text-xl text-primary md:text-2xl">
-              Departure Calendar
-            </h3>
-            <p className="mt-1 text-sm text-on-surface-variant">
-              Tap any highlighted day — we&rsquo;ll jump you straight to its
-              packages below.
-            </p>
           </div>
-          <span className="inline-flex items-center gap-3 text-xs text-on-surface-variant">
-            <span className="inline-flex items-center gap-1.5">
+        )}
+
+        {/* Departure calendar — merged into the filters card */}
+        <div className="mt-5 border-t border-outline-variant/40 pt-5">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h3 className="font-[var(--font-heading)] text-lg text-on-surface md:text-xl">
+                Departure Calendar
+              </h3>
+              <p className="mt-1 text-sm text-on-surface-variant">
+                Tap any highlighted day — we&rsquo;ll jump you straight to its
+                packages below.
+              </p>
+            </div>
+            <span className="inline-flex items-center gap-1.5 text-xs text-on-surface-variant">
               <span className="h-2.5 w-2.5 rounded-sm border border-secondary/40 bg-secondary-container" />
               Seats open
             </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-sm border border-outline-variant bg-surface-container" />
-              Sold out
-            </span>
-          </span>
-        </div>
+          </div>
 
-        <div className="mt-5">
-          <DepartureCalendar
-            packages={baseFiltered}
-            selectedDate={selectedDate}
-            onSelect={handleSelectDate}
-          />
+          <div className="mt-4">
+            <DepartureCalendar
+              packages={baseFiltered}
+              selectedDate={selectedDate}
+              onSelect={handleSelectDate}
+            />
+          </div>
         </div>
       </div>
 
       {/* Results */}
-      <div ref={resultsRef} className="mt-12 scroll-mt-28">
+      <div ref={resultsRef} className="mt-10 scroll-mt-28">
         <div className="flex flex-wrap items-center justify-between gap-3">
           {selectedDate ? (
             <span className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-on-primary">
@@ -206,14 +204,14 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
           ) : (
             <p className="text-sm text-on-surface-variant">
               Showing{" "}
-              <span className="font-semibold text-primary">{filtered.length}</span> of{" "}
-              {packages.length} departures
+              <span className="font-semibold text-on-surface">{filtered.length}</span> of{" "}
+              {availablePackages.length} departures
             </p>
           )}
 
           {selectedDate && (
             <p className="text-sm text-on-surface-variant">
-              <span className="font-semibold text-primary">{filtered.length}</span>{" "}
+              <span className="font-semibold text-on-surface">{filtered.length}</span>{" "}
               package{filtered.length === 1 ? "" : "s"} on this date
             </p>
           )}
@@ -234,7 +232,7 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
         ) : (
           <div className="mt-5 flex flex-col items-center rounded-xl border border-dashed border-outline-variant bg-surface-container-low p-16 text-center">
             <Icon name="search_off" className="text-5xl text-on-surface-variant" />
-            <p className="mt-4 font-[var(--font-heading)] text-xl text-primary">
+            <p className="mt-4 font-[var(--font-heading)] text-xl text-on-surface">
               No matching departures
             </p>
             <p className="mt-1 text-sm text-on-surface-variant">

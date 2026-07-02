@@ -17,6 +17,7 @@ export default function CalculatorPage() {
         title="Umrah Package Calculator"
         description="Build your estimate in five guided steps. Adjust travelers, visa, and hotels to see your total update live."
         icon="calculate"
+        image="/images/madinah.jpg"
       />
       <section className="py-14 md:py-20">
         <Container>

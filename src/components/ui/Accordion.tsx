@@ -23,7 +23,7 @@ export function Accordion({ items }: { items: Item[] }) {
               aria-expanded={isOpen}
               className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left"
             >
-              <span className="font-semibold text-primary">{item.q}</span>
+              <span className="font-semibold text-on-surface">{item.q}</span>
               <Icon
                 name="expand_more"
                 className={clsx(

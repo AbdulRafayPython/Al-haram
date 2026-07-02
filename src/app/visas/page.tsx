@@ -31,6 +31,7 @@ export default function VisasPage() {
         title="Visa Services"
         description="From Umrah e-visas to Hajj and tour visas, our documentation team keeps the process clear and on time."
         icon="description"
+        image="/images/madinah.jpg"
       />
 
       {/* Visa type overview */}
@@ -50,7 +51,7 @@ export default function VisasPage() {
                 <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-secondary-container">
                   <Icon name={v.icon} className="text-2xl text-secondary" />
                 </div>
-                <h3 className="font-[var(--font-heading)] text-xl text-primary">{v.title}</h3>
+                <h3 className="font-[var(--font-heading)] text-xl text-on-surface">{v.title}</h3>
                 <p className="mt-2 flex-1 text-sm leading-relaxed text-on-surface-variant">
                   {v.blurb}
                 </p>
@@ -99,7 +100,7 @@ export default function VisasPage() {
                 <p className="text-sm uppercase tracking-widest text-secondary">
                   {v.validityDays} Days Validity
                 </p>
-                <p className="mt-4 font-[var(--font-heading)] text-4xl text-primary">
+                <p className="mt-4 font-[var(--font-heading)] text-4xl text-on-surface">
                   {formatPkr(v.pricePkr)}
                 </p>
                 <p className="mt-1 text-xs text-on-surface-variant">{v.note}</p>
@@ -139,7 +140,7 @@ export default function VisasPage() {
                 <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-primary">
                   <Icon name={s.icon} className="text-2xl text-secondary-fixed" />
                 </div>
-                <h3 className="font-semibold text-primary">{s.title}</h3>
+                <h3 className="font-semibold text-on-surface">{s.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-on-surface-variant">{s.desc}</p>
               </div>
             ))}

@@ -27,23 +27,25 @@ export default function UmrahPackagesPage() {
         title="Umrah Packages from Pakistan"
         description="Real-time departures with airline, hotel, room type, and seat status. Filter to find the journey that fits you."
         icon="flight_class"
+        image="/images/kaaba.jpg"
+        compact
       />
 
       {/* Summary stats */}
-      <section className="border-b border-outline-variant/40 bg-surface-container-low py-10">
+      <section className="border-b border-outline-variant/40 bg-surface-container-low py-4">
         <Container>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {summary.map((s) => (
               <div
                 key={s.label}
-                className="flex items-center gap-4 rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-5"
+                className="flex items-center gap-3 rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-3"
               >
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-secondary-container">
-                  <Icon name={s.icon} className="text-2xl text-secondary" />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary-container">
+                  <Icon name={s.icon} className="text-xl text-secondary" />
                 </div>
                 <div>
-                  <p className="font-[var(--font-heading)] text-2xl text-primary">{s.value}</p>
-                  <p className="text-xs uppercase tracking-wider text-on-surface-variant">
+                  <p className="font-[var(--font-heading)] text-xl text-on-surface">{s.value}</p>
+                  <p className="text-[0.65rem] uppercase tracking-wider text-on-surface-variant">
                     {s.label}
                   </p>
                 </div>
@@ -54,7 +56,7 @@ export default function UmrahPackagesPage() {
       </section>
 
       {/* Board */}
-      <section className="py-14 md:py-20">
+      <section className="py-6 md:py-8">
         <Container>
           <PackageBoard packages={packages} />
         </Container>
@@ -63,7 +65,7 @@ export default function UmrahPackagesPage() {
       {/* City breakdown */}
       <section className="bg-surface-container-low py-14 md:py-20">
         <Container>
-          <h2 className="font-[var(--font-heading)] text-2xl text-primary md:text-3xl">
+          <h2 className="font-[var(--font-heading)] text-2xl text-on-surface md:text-3xl">
             Availability by Departure City
           </h2>
           <p className="mt-2 text-sm text-on-surface-variant">

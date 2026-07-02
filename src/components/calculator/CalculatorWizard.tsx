@@ -109,7 +109,7 @@ export function CalculatorWizard() {
                 <span
                   className={clsx(
                     "hidden text-xs font-medium sm:block",
-                    i === step ? "text-primary" : "text-on-surface-variant",
+                    i === step ? "text-on-surface" : "text-on-surface-variant",
                   )}
                 >
                   {label}
@@ -161,13 +161,13 @@ export function CalculatorWizard() {
                         className="h-4 w-4 accent-primary"
                       />
                       <div>
-                        <p className="font-semibold text-primary">{v.validityDays} Days Umrah Visa</p>
+                        <p className="font-semibold text-on-surface">{v.validityDays} Days Umrah Visa</p>
                         <p className="text-xs text-on-surface-variant">
                           {v.mode} · ~{v.processingDays} day processing
                         </p>
                       </div>
                     </div>
-                    <span className="font-[var(--font-heading)] text-lg text-primary">
+                    <span className="font-[var(--font-heading)] text-lg text-on-surface">
                       {formatPkr(v.pricePkr)}
                     </span>
                   </label>
@@ -232,7 +232,7 @@ export function CalculatorWizard() {
           <button
             onClick={back}
             disabled={step === 0}
-            className="inline-flex items-center gap-1.5 rounded-lg px-5 py-2.5 text-sm font-semibold text-on-surface-variant transition-colors hover:text-primary disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 rounded-lg px-5 py-2.5 text-sm font-semibold text-on-surface-variant transition-colors hover:text-on-surface disabled:opacity-40"
           >
             <Icon name="arrow_back" className="text-base" /> Back
           </button>
@@ -300,7 +300,7 @@ function StepShell({
 }) {
   return (
     <div>
-      <h2 className="font-[var(--font-heading)] text-2xl text-primary">{title}</h2>
+      <h2 className="font-[var(--font-heading)] text-2xl text-on-surface">{title}</h2>
       <p className="mt-1 text-sm text-on-surface-variant">{subtitle}</p>
       <div className="mt-6">{children}</div>
     </div>
@@ -370,7 +370,7 @@ function HotelStep({
                       : "border-outline-variant/50 hover:border-secondary/40",
                   )}
                 >
-                  <p className="text-sm font-semibold text-primary">{r.label}</p>
+                  <p className="text-sm font-semibold text-on-surface">{r.label}</p>
                   <p className="text-xs text-on-surface-variant">{formatSar(hotel.rates[r.key])}</p>
                 </button>
               );
@@ -407,16 +407,16 @@ function Counter({
         <button
           onClick={() => onChange(Math.max(min, value - 1))}
           aria-label={`Decrease ${label}`}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-outline-variant text-primary transition-colors hover:bg-surface-container disabled:opacity-40"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-outline-variant text-on-surface transition-colors hover:bg-surface-container disabled:opacity-40"
           disabled={value <= min}
         >
           <Icon name="remove" className="text-lg" />
         </button>
-        <span className="w-6 text-center font-semibold text-primary">{value}</span>
+        <span className="w-6 text-center font-semibold text-on-surface">{value}</span>
         <button
           onClick={() => onChange(value + 1)}
           aria-label={`Increase ${label}`}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-outline-variant text-primary transition-colors hover:bg-surface-container"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-outline-variant text-on-surface transition-colors hover:bg-surface-container"
         >
           <Icon name="add" className="text-lg" />
         </button>

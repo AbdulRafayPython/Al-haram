@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Icon } from "@/components/ui/Icon";
+import { BlendImage } from "@/components/ui/BlendImage";
 
 interface BoardCardProps {
   pillIcon: string;
@@ -9,6 +10,7 @@ interface BoardCardProps {
   description: string;
   buttonLabel: string;
   href: string;
+  image: string;
 }
 
 /**
@@ -24,15 +26,12 @@ export function BoardCard({
   description,
   buttonLabel,
   href,
+  image,
 }: BoardCardProps) {
   return (
     <article className="group relative overflow-hidden rounded-xl bg-primary p-6 shadow-lg transition-all hover:-translate-y-1 hover:shadow-2xl md:p-9">
-      {/* Decorative watermark */}
-      <Icon
-        name={icon}
-        className="pointer-events-none absolute -right-6 top-1/2 -translate-y-1/2 text-[200px] text-on-primary/[0.04]"
-      />
-      <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary to-primary-container/60" />
+      {/* Blended destination photo */}
+      <BlendImage src={image} variant="card" />
 
       <div className="relative z-10">
         {/* Status pill */}

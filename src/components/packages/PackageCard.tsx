@@ -1,5 +1,6 @@
 import { Icon } from "@/components/ui/Icon";
 import { SeatBadge } from "@/components/ui/SeatBadge";
+import { BlendImage } from "@/components/ui/BlendImage";
 import { clsx } from "@/lib/clsx";
 import { formatPkr, formatDate } from "@/lib/format";
 import { site } from "@/data/site";
@@ -11,17 +12,20 @@ export function PackageCard({ pkg }: { pkg: UmrahPackage }) {
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl border border-outline-variant/40 bg-surface-container-lowest shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl">
       {/* Header band */}
-      <div className="relative flex items-center justify-between bg-primary px-6 py-5 text-on-primary">
-        <div>
-          <p className="text-xs uppercase tracking-widest text-secondary-fixed">
-            {pkg.airline}
-          </p>
-          <h3 className="mt-1 font-[var(--font-heading)] text-xl text-on-primary">
-            {pkg.departureCity}
-          </h3>
-        </div>
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-on-primary/10">
-          <Icon name="flight_takeoff" className="text-2xl text-secondary-fixed" />
+      <div className="relative overflow-hidden bg-primary px-6 py-5 text-on-primary">
+        <BlendImage src="/images/kaaba.jpg" variant="card" position="object-center" />
+        <div className="relative z-10 flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-widest text-secondary-fixed">
+              {pkg.airline}
+            </p>
+            <h3 className="mt-1 font-[var(--font-heading)] text-xl text-on-primary">
+              {pkg.departureCity}
+            </h3>
+          </div>
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-on-primary/10 backdrop-blur-sm">
+            <Icon name="flight_takeoff" className="text-2xl text-secondary-fixed" />
+          </div>
         </div>
       </div>
 
@@ -47,7 +51,7 @@ export function PackageCard({ pkg }: { pkg: UmrahPackage }) {
             <p className="text-xs uppercase tracking-wider text-on-surface-variant">
               From / person
             </p>
-            <p className="font-[var(--font-heading)] text-2xl text-primary">
+            <p className="font-[var(--font-heading)] text-2xl text-on-surface">
               {formatPkr(pkg.pricePkr)}
             </p>
           </div>

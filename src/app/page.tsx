@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Reveal } from "@/components/ui/Reveal";
 import { BoardCard } from "@/components/home/BoardCard";
+import { BlendImage } from "@/components/ui/BlendImage";
 import { airlines, testimonials } from "@/data/packages";
 import { visas } from "@/data/visas";
 import { stats, site } from "@/data/site";
@@ -19,6 +20,7 @@ const boards = [
       "Browse our live package board for routes from Pakistan, departure dates, airline options, hotel combinations, seat status, and current package rates.",
     buttonLabel: "View Packages",
     href: "/umrah-packages",
+    image: "/images/kaaba.jpg",
   },
   {
     pillIcon: "location_on",
@@ -29,6 +31,7 @@ const boards = [
       "Browse selected Makkah and Madinah stays with location, distance from Haram, room rates, images, and map details — all in one place.",
     buttonLabel: "View Hotels",
     href: "/saudi-hotels",
+    image: "/images/makkah-skyline.jpg",
   },
   {
     pillIcon: "route",
@@ -39,6 +42,7 @@ const boards = [
       "Browse airport transfers, hotel transfers, railway connections, and ziyarat routes by vehicle occupancy and current route rates.",
     buttonLabel: "View Transport",
     href: "/saudi-transport",
+    image: "/images/transport.jpg",
   },
   {
     pillIcon: "calculate",
@@ -49,6 +53,7 @@ const boards = [
       "Estimate visa and hotel costs from current rates, compare Makkah and Madinah stay options, and prepare a clearer Umrah budget before booking.",
     buttonLabel: "Calculate Package",
     href: "/calculator",
+    image: "/images/madinah.jpg",
   },
 ];
 
@@ -68,7 +73,7 @@ export default function HomePage() {
       <section className="relative overflow-hidden bg-surface">
         <Icon
           name="mosque"
-          className="pointer-events-none absolute -right-10 top-0 text-[360px] text-primary/[0.03]"
+          className="pointer-events-none absolute -right-10 top-0 text-[360px] text-on-surface/[0.03]"
         />
         <Container className="relative py-16 md:py-24">
           <div className="grid gap-10 lg:grid-cols-12 lg:items-end">
@@ -76,7 +81,7 @@ export default function HomePage() {
               <span className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.25em] text-secondary">
                 <span className="h-px w-8 bg-secondary" /> Umrah Travel Services
               </span>
-              <h1 className="font-[var(--font-heading)] text-4xl font-extrabold leading-[1.1] text-primary md:text-5xl lg:text-6xl">
+              <h1 className="font-[var(--font-heading)] text-4xl font-extrabold leading-[1.1] text-on-surface md:text-5xl lg:text-6xl">
                 Umrah Packages from Pakistan with Makkah &amp; Madinah hotel options
               </h1>
               <div className="mt-8 flex flex-col gap-4 sm:flex-row">
@@ -103,7 +108,7 @@ export default function HomePage() {
                     <span className="block text-xs uppercase tracking-wider text-on-surface-variant">
                       24/7 Consultant
                     </span>
-                    <span className="font-bold text-primary">{site.phone}</span>
+                    <span className="font-bold text-on-surface">{site.phone}</span>
                   </span>
                 </a>
               </div>
@@ -136,7 +141,7 @@ export default function HomePage() {
             {airlines.map((a) => (
               <div
                 key={a}
-                className="flex h-16 items-center justify-center rounded-lg border border-outline-variant/60 bg-surface-container-lowest px-3 text-center text-sm font-semibold text-primary"
+                className="flex h-16 items-center justify-center rounded-lg border border-outline-variant/60 bg-surface-container-lowest px-3 text-center text-sm font-semibold text-on-surface"
               >
                 {a}
               </div>
@@ -170,7 +175,7 @@ export default function HomePage() {
                     <Icon name={f.icon} className="text-3xl" />
                   </div>
                   <div>
-                    <h3 className="font-[var(--font-heading)] text-lg font-bold text-primary">
+                    <h3 className="font-[var(--font-heading)] text-lg font-bold text-on-surface">
                       {f.title}
                     </h3>
                     <p className="mt-2 text-sm leading-relaxed text-on-surface-variant">
@@ -220,7 +225,7 @@ export default function HomePage() {
                   <p className="text-sm font-semibold uppercase tracking-widest text-secondary">
                     {v.validityDays} Days
                   </p>
-                  <p className="mt-3 font-[var(--font-heading)] text-3xl font-extrabold text-primary">
+                  <p className="mt-3 font-[var(--font-heading)] text-3xl font-extrabold text-on-surface">
                     {formatPkr(v.pricePkr)}
                   </p>
                   <p className="mt-1 text-xs text-on-surface-variant">{v.note}</p>
@@ -259,7 +264,7 @@ export default function HomePage() {
                     “{t.quote}”
                   </blockquote>
                   <figcaption className="mt-5 flex items-center justify-between border-t border-outline-variant/60 pt-4">
-                    <span className="font-bold text-primary">{t.name}</span>
+                    <span className="font-bold text-on-surface">{t.name}</span>
                     <span className="text-xs text-on-surface-variant">{t.date}</span>
                   </figcaption>
                 </figure>
@@ -271,10 +276,7 @@ export default function HomePage() {
 
       {/* ---------------- CTA ---------------- */}
       <section className="relative overflow-hidden bg-primary py-16 md:py-20">
-        <Icon
-          name="flight_takeoff"
-          className="pointer-events-none absolute -right-6 top-1/2 -translate-y-1/2 text-[280px] text-on-primary/[0.04]"
-        />
+        <BlendImage src="/images/pilgrims.jpg" variant="card" position="object-top" />
         <Container className="relative z-10 flex flex-col items-center justify-between gap-8 text-center md:flex-row md:text-left">
           <div>
             <span className="mb-3 block font-[var(--font-script)] text-2xl text-secondary-fixed">

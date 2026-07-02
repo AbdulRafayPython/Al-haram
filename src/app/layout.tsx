@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Jost, Rubik, Satisfy } from "next/font/google";
+import { Jost, Rubik, Satisfy, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -25,6 +25,13 @@ const satisfy = Satisfy({
   display: "swap",
 });
 
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
+  variable: "--font-playfair",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: {
     default: `${site.name} — Umrah Packages, Hotels & Visas from Pakistan`,
@@ -37,7 +44,10 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${jost.variable} ${rubik.variable} ${satisfy.variable}`}>
+    <html
+      lang="en"
+      className={`${jost.variable} ${rubik.variable} ${satisfy.variable} ${playfair.variable}`}
+    >
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link

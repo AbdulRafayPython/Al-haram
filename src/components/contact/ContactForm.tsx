@@ -29,7 +29,7 @@ export function ContactForm() {
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-success/10">
           <Icon name="check_circle" className="text-4xl text-success" />
         </div>
-        <h3 className="mt-5 font-[var(--font-heading)] text-2xl text-primary">Thank you!</h3>
+        <h3 className="mt-5 font-[var(--font-heading)] text-2xl text-on-surface">Thank you!</h3>
         <p className="mt-2 max-w-sm text-sm text-on-surface-variant">
           Your message is on its way to our consultants on WhatsApp. We typically respond
           within a few hours.

@@ -25,6 +25,7 @@ export default function ContactPage() {
         title="We're Here to Help"
         description="Speak with our consultants about packages, hotels, visas, or transport. Reach us whichever way is easiest for you."
         icon="contact_support"
+        image="/images/kaaba.jpg"
       />
 
       {/* Channels */}
@@ -43,7 +44,7 @@ export default function ContactPage() {
                   <Icon name={c.icon} className="text-3xl text-secondary group-hover:text-on-secondary" />
                 </div>
                 <p className="text-xs uppercase tracking-widest text-on-surface-variant">{c.label}</p>
-                <p className="mt-2 font-[var(--font-heading)] text-lg text-primary">{c.value}</p>
+                <p className="mt-2 font-[var(--font-heading)] text-lg text-on-surface">{c.value}</p>
                 <p className="mt-1 text-xs text-on-surface-variant">{c.note}</p>
               </a>
             ))}
@@ -55,7 +56,7 @@ export default function ContactPage() {
       <section className="bg-surface-container-low py-14 md:py-20">
         <Container className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_380px]">
           <div>
-            <h2 className="font-[var(--font-heading)] text-2xl text-primary md:text-3xl">
+            <h2 className="font-[var(--font-heading)] text-2xl text-on-surface md:text-3xl">
               Send Us a Message
             </h2>
             <p className="mt-2 text-sm text-on-surface-variant">
@@ -68,7 +69,7 @@ export default function ContactPage() {
 
           <aside className="space-y-6">
             <div className="rounded-2xl border border-outline-variant/40 bg-surface-container-lowest p-7">
-              <h3 className="font-[var(--font-heading)] text-xl text-primary">Visit Our Office</h3>
+              <h3 className="font-[var(--font-heading)] text-xl text-on-surface">Visit Our Office</h3>
               <ul className="mt-5 space-y-4 text-sm">
                 <Detail icon="location_on" label="Address" value={site.address} />
                 <Detail icon="schedule" label="Office Hours" value={site.hours} />

@@ -23,7 +23,6 @@ const MONTH_NAMES = [
 interface DayInfo {
   seats: number;
   count: number;
-  soldOut: boolean;
 }
 
 interface MonthCell {
@@ -56,14 +55,9 @@ export function DepartureCalendar({
   const { months, byDate } = useMemo(() => {
     const byDate = new Map<string, DayInfo>();
     for (const p of packages) {
-      const cur = byDate.get(p.departureDate) ?? {
-        seats: 0,
-        count: 0,
-        soldOut: true,
-      };
+      const cur = byDate.get(p.departureDate) ?? { seats: 0, count: 0 };
       cur.seats += p.seatsAvailable;
       cur.count += 1;
-      cur.soldOut = cur.soldOut && p.seatsAvailable === 0;
       byDate.set(p.departureDate, cur);
     }
 
@@ -119,7 +113,7 @@ function MonthGrid({
 
   return (
     <div className="rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-4 shadow-sm">
-      <p className="mb-3 flex items-baseline justify-between font-[var(--font-heading)] text-lg text-primary">
+      <p className="mb-3 flex items-baseline justify-between font-[var(--font-heading)] text-lg text-on-surface">
         {MONTH_NAMES[month]}
         <span className="text-sm font-medium text-on-surface-variant">{year}</span>
       </p>
@@ -152,9 +146,7 @@ function MonthGrid({
             );
           }
 
-          const seatLabel = info.soldOut
-            ? "Sold out"
-            : `${info.seats} seat${info.seats === 1 ? "" : "s"}`;
+          const seatLabel = `${info.seats} seat${info.seats === 1 ? "" : "s"}`;
 
           return (
             <button
@@ -168,23 +160,17 @@ function MonthGrid({
                 "focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary-fixed",
                 isSelected
                   ? "bg-primary text-on-primary shadow-md ring-2 ring-secondary-fixed"
-                  : info.soldOut
-                    ? "border border-outline-variant/60 bg-surface-container text-on-surface-variant hover:border-outline"
-                    : "border border-secondary/25 bg-secondary-container/40 text-on-surface hover:bg-secondary-container hover:shadow-sm",
+                  : "border border-secondary/25 bg-secondary-container/40 text-on-surface hover:bg-secondary-container hover:shadow-sm",
               )}
             >
               <span className="leading-none">{day}</span>
               <span
                 className={clsx(
                   "mt-0.5 text-[0.55rem] font-medium leading-none",
-                  isSelected
-                    ? "text-secondary-fixed"
-                    : info.soldOut
-                      ? "text-on-surface-variant/70"
-                      : "text-secondary",
+                  isSelected ? "text-secondary-fixed" : "text-secondary",
                 )}
               >
-                {info.soldOut ? "0 seats" : info.seats}
+                {info.seats}
               </span>
             </button>
           );

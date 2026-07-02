@@ -26,6 +26,7 @@ export default function SaudiHotelsPage() {
         title="Makkah & Madinah Hotels"
         description="Compare hotels near the Haramain by distance, room configuration, and nightly rate. All rates shown in SAR."
         icon="hotel"
+        image="/images/makkah-skyline.jpg"
       />
 
       <section className="border-b border-outline-variant/40 bg-surface-container-low py-10">
@@ -40,7 +41,7 @@ export default function SaudiHotelsPage() {
                   <Icon name={s.icon} className="text-2xl text-secondary" />
                 </div>
                 <div>
-                  <p className="font-[var(--font-heading)] text-2xl text-primary">{s.value}</p>
+                  <p className="font-[var(--font-heading)] text-2xl text-on-surface">{s.value}</p>
                   <p className="text-xs uppercase tracking-wider text-on-surface-variant">
                     {s.label}
                   </p>

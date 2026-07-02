@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
+import { BlendImage } from "@/components/ui/BlendImage";
 import { clsx } from "@/lib/clsx";
 import { formatSar } from "@/lib/format";
 import { site } from "@/data/site";
@@ -39,7 +40,7 @@ export function HotelGallery({ hotels }: { hotels: Hotel[] }) {
                 "rounded-md px-5 py-2 text-sm font-semibold transition-colors",
                 city === c.key
                   ? "bg-primary text-on-primary"
-                  : "text-on-surface-variant hover:text-primary",
+                  : "text-on-surface-variant hover:text-on-surface",
               )}
             >
               {c.label}
@@ -63,7 +64,7 @@ export function HotelGallery({ hotels }: { hotels: Hotel[] }) {
       </div>
 
       <p className="mt-6 text-sm text-on-surface-variant">
-        Showing <span className="font-semibold text-primary">{filtered.length}</span>{" "}
+        Showing <span className="font-semibold text-on-surface">{filtered.length}</span>{" "}
         of {hotels.length} hotels
       </p>
 
@@ -76,7 +77,7 @@ export function HotelGallery({ hotels }: { hotels: Hotel[] }) {
       ) : (
         <div className="mt-4 flex flex-col items-center rounded-xl border border-dashed border-outline-variant bg-surface-container-low p-16 text-center">
           <Icon name="search_off" className="text-5xl text-on-surface-variant" />
-          <p className="mt-4 font-[var(--font-heading)] text-xl text-primary">No hotels found</p>
+          <p className="mt-4 font-[var(--font-heading)] text-xl text-on-surface">No hotels found</p>
           <p className="mt-1 text-sm text-on-surface-variant">Try a different search term or city.</p>
         </div>
       )}
@@ -97,19 +98,21 @@ function HotelCard({ hotel }: { hotel: Hotel }) {
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl border border-outline-variant/40 bg-surface-container-lowest shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl">
       {/* Visual */}
-      <div className="relative flex h-40 items-center justify-center overflow-hidden bg-gradient-to-br from-primary to-primary-container">
-        <Icon
-          name={hotel.city === "Makkah" ? "mosque" : "local_hotel"}
-          className="text-7xl text-on-primary/20 transition-transform duration-500 group-hover:scale-110"
+      <div className="relative h-40 overflow-hidden bg-primary">
+        <BlendImage
+          src={hotel.city === "Makkah" ? "/images/makkah-skyline.jpg" : "/images/madinah.jpg"}
+          variant="photo"
+          position="object-center"
         />
-        <span className="absolute left-4 top-4 rounded-full bg-on-primary/15 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-on-primary backdrop-blur-sm">
+        <span className="absolute left-4 top-4 z-10 inline-flex items-center gap-1 rounded-full bg-primary/40 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-on-primary backdrop-blur-sm">
+          <Icon name="location_on" className="text-sm text-secondary-fixed" />
           {hotel.city}
         </span>
       </div>
 
       {/* Body */}
       <div className="flex flex-1 flex-col p-6">
-        <h3 className="font-[var(--font-heading)] text-lg text-primary">{hotel.name}</h3>
+        <h3 className="font-[var(--font-heading)] text-lg text-on-surface">{hotel.name}</h3>
         <p className="mt-1 flex items-center gap-1.5 text-sm text-on-surface-variant">
           <Icon name="location_on" className="text-base text-secondary" />
           {hotel.location}
@@ -137,7 +140,7 @@ function HotelCard({ hotel }: { hotel: Hotel }) {
         <div className="mt-auto flex items-end justify-between pt-5">
           <div>
             <p className="text-xs uppercase tracking-wider text-on-surface-variant">From</p>
-            <p className="font-[var(--font-heading)] text-xl text-primary">{formatSar(lowest)}</p>
+            <p className="font-[var(--font-heading)] text-xl text-on-surface">{formatSar(lowest)}</p>
             <p className="text-xs text-on-surface-variant">per night</p>
           </div>
           <a

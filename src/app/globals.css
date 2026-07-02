@@ -1,59 +1,61 @@
 @import "tailwindcss";
 
 /* ------------------------------------------------------------------ *
- * Haram Gateway Express — Design System
- * Matched to the live site: Deep Navy + Burnished Gold, Jost + Rubik.
- * Semantic tokens keep component code stable across re-themes.
+ * Haram Gateway Express — Design System (Dark)
+ * Black page + charcoal cards, Deep Navy + Burnished Gold brand accents.
+ * Jost + Rubik. Semantic tokens keep component code stable across re-themes.
  * ------------------------------------------------------------------ */
 
 @theme {
-  /* Light surfaces */
-  --color-background: #ffffff;
-  --color-surface: #ffffff;
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f7f4ee;
-  --color-surface-container: #f0ebe2;
-  --color-surface-container-high: #e9e3d8;
-  --color-surface-variant: #e6e0d4;
+  /* Dark surfaces — black page, charcoal elevated cards */
+  --color-background: #0a0a0b;
+  --color-surface: #111216;
+  --color-surface-container-lowest: #15161b;
+  --color-surface-container-low: #191b20;
+  --color-surface-container: #202329;
+  --color-surface-container-high: #272a31;
+  --color-surface-variant: #23262d;
 
   /* Primary — Deep Navy (hero panels, board cards, buttons) */
-  --color-primary: #16243f;
-  --color-on-primary: #ffffff;
-  --color-primary-container: #213257;
-  --color-on-primary-container: #b9c2d6;
-  --color-primary-fixed: #d7deea;
-  --color-primary-fixed-dim: #aab5cb;
+  --color-primary: #1b2c4d;
+  --color-on-primary: #f4f6fa;
+  --color-primary-container: #25395f;
+  --color-on-primary-container: #c3ccdd;
+  --color-primary-fixed: #2a3c63;
+  --color-primary-fixed-dim: #1f2e4d;
 
-  /* Secondary — Burnished Gold */
-  --color-secondary: #b07d12;          /* gold text / icons on light */
-  --color-on-secondary: #ffffff;
-  --color-secondary-container: #fce8bd; /* soft gold tint */
-  --color-on-secondary-container: #6b4e09;
+  /* Secondary — Burnished Gold (luminous on dark) */
+  --color-secondary: #d2a23f;          /* gold text / icons on dark */
+  --color-on-secondary: #16243f;       /* navy text on gold badges */
+  --color-secondary-container: #3a2e12; /* deep gold tint */
+  --color-on-secondary-container: #f1cd84;
   --color-secondary-fixed: #f2b21e;     /* bright gold buttons */
   --color-secondary-fixed-dim: #e0a216;
   --color-on-secondary-fixed: #16243f;  /* navy text on gold */
 
-  /* Tertiary — near-black footer + cream sections */
-  --color-tertiary: #14140f;
-  --color-tertiary-fixed: #f1ece4;
-  --color-tertiary-container: #20201a;
-  --color-on-tertiary: #e7e4dc;
+  /* Tertiary — darkest footer + dark feature sections */
+  --color-tertiary: #0d0e11;
+  --color-tertiary-fixed: #15171c;
+  --color-tertiary-container: #1c1f25;
+  --color-on-tertiary: #dad8d2;
 
   /* Text & lines */
-  --color-on-surface: #16243f;
-  --color-on-surface-variant: #5b6473;
-  --color-outline: #8b909a;
-  --color-outline-variant: #e0dccf;
+  --color-on-surface: #ecebe6;
+  --color-on-surface-variant: #a2a7b0;
+  --color-outline: #6b7178;
+  --color-outline-variant: #3a3e46;
 
   /* Status */
-  --color-error: #ba1a1a;
-  --color-success: #1b7340;
+  --color-error: #ff5a4d;
+  --color-success: #38b26a;
   --color-whatsapp: #25d366;
 
   /* Typography */
   --font-heading: var(--font-rubik), system-ui, sans-serif;
   --font-body: var(--font-jost), system-ui, sans-serif;
   --font-script: var(--font-satisfy), cursive;
+  /* Premium serif for standout page titles (hero headlines) */
+  --font-display: var(--font-playfair), Georgia, serif;
 
   /* Layout rhythm */
   --spacing-gutter: 24px;
@@ -69,6 +71,7 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    color-scheme: dark;
   }
 
   body {

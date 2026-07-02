@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Reveal } from "@/components/ui/Reveal";
+import { BlendImage } from "@/components/ui/BlendImage";
 import { stats } from "@/data/site";
 
 export const metadata: Metadata = {
@@ -33,6 +34,7 @@ export default function AboutPage() {
         title="Your Trusted Gateway to the Haram"
         description="A Karachi-based travel company dedicated to making your Umrah and Hajj journey peaceful, transparent, and memorable."
         icon="diversity_3"
+        image="/images/pilgrims.jpg"
       />
 
       {/* Mission */}
@@ -42,7 +44,7 @@ export default function AboutPage() {
             <span className="mb-4 block text-sm font-semibold uppercase tracking-[0.2em] text-secondary">
               Our Mission
             </span>
-            <h2 className="font-[var(--font-heading)] text-3xl leading-tight text-primary md:text-4xl">
+            <h2 className="font-[var(--font-heading)] text-3xl leading-tight text-on-surface md:text-4xl">
               A peaceful Umrah experience that lasts a lifetime
             </h2>
             <p className="mt-5 text-lg leading-relaxed text-on-surface-variant">
@@ -61,9 +63,9 @@ export default function AboutPage() {
           </Reveal>
 
           <Reveal delay={120}>
-            <div className="relative">
-              <div className="flex aspect-[4/5] items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-primary-container">
-                <Icon name="mosque" className="text-[200px] text-on-primary/15" />
+            <div className="group relative">
+              <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-primary">
+                <BlendImage src="/images/kaaba.jpg" variant="photo" position="object-center" />
               </div>
               <div className="absolute -bottom-6 -right-4 rounded-2xl bg-secondary-fixed p-8 text-on-secondary-fixed shadow-xl md:-right-6">
                 <p className="font-[var(--font-heading)] text-5xl leading-none">15+</p>
@@ -79,8 +81,9 @@ export default function AboutPage() {
       </section>
 
       {/* Stats band */}
-      <section className="bg-primary py-16 text-on-primary">
-        <Container>
+      <section className="relative overflow-hidden bg-primary py-16 text-on-primary">
+        <BlendImage src="/images/makkah-skyline.jpg" variant="tint" position="object-center" />
+        <Container className="relative z-10">
           <div className="grid grid-cols-2 gap-8 text-center md:grid-cols-4">
             {stats.map((s) => (
               <div key={s.label}>
@@ -122,7 +125,7 @@ export default function AboutPage() {
                   <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-secondary-container">
                     <Icon name={v.icon} className="text-3xl text-secondary" />
                   </div>
-                  <h3 className="font-[var(--font-heading)] text-xl text-primary">{v.title}</h3>
+                  <h3 className="font-[var(--font-heading)] text-xl text-on-surface">{v.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-on-surface-variant">{v.desc}</p>
                 </div>
               </Reveal>
