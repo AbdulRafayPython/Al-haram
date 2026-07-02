@@ -4,8 +4,8 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
-        source: "/",
-        destination: "/umrah-packages",
+        source: "/umrah-packages",
+        destination: "/",
         permanent: false,
       },
     ];

@@ -11,7 +11,7 @@ import { stats } from "@/data/site";
 export const metadata: Metadata = {
   title: "About Us",
   description:
-    "Haram Gateway Express is a Karachi-based travel company specializing in Umrah, Hajj, and international travel with 15 years of experience.",
+    "Sasta Travel Express is a Karachi-based travel company specializing in Umrah, Hajj, and international travel with 15 years of experience.",
 };
 
 const values = [
@@ -48,7 +48,7 @@ export default function AboutPage() {
               A peaceful Umrah experience that lasts a lifetime
             </h2>
             <p className="mt-5 text-lg leading-relaxed text-on-surface-variant">
-              Haram Gateway Express specializes in Umrah services, Hajj arrangements, and
+              Sasta Travel Express specializes in Umrah services, Hajj arrangements, and
               international tourism. We serve pilgrims across Pakistan with visa processing,
               flight bookings, hotel accommodations, and guided tours.
             </p>
@@ -57,7 +57,7 @@ export default function AboutPage() {
               support — delivering a journey that leaves you with lifelong memories and
               spiritual satisfaction.
             </p>
-            <Button href="/umrah-packages" className="mt-8">
+            <Button href="/" className="mt-8">
               Explore Packages <Icon name="arrow_forward" className="text-base" />
             </Button>
           </Reveal>

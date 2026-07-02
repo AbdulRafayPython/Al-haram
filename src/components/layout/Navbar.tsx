@@ -11,7 +11,7 @@ import { mainNav, site } from "@/data/site";
 const socials = [
   { icon: "public", href: site.social.facebook, label: "Facebook" },
   { icon: "photo_camera", href: site.social.instagram, label: "Instagram" },
-  { icon: "work", href: site.social.linkedin, label: "LinkedIn" },
+  { icon: "smart_display", href: site.social.youtube, label: "YouTube" },
 ];
 
 export function Navbar() {
@@ -27,16 +27,16 @@ export function Navbar() {
       <div className="bg-tertiary text-on-tertiary/80">
         <Container className="flex h-9 items-center justify-between text-xs">
           <a
-            href={site.emailHref}
+            href={site.phoneHref}
             className="hidden items-center gap-2 transition-colors hover:text-secondary-fixed sm:flex"
           >
-            <Icon name="mail" className="text-sm text-secondary-fixed" />
-            {site.email}
+            <Icon name="call" className="text-sm text-secondary-fixed" />
+            {site.phone}
           </a>
           <p className="flex items-center gap-2 text-center">
             <span className="font-semibold text-secondary-fixed">20% Off</span>
             <span className="hidden sm:inline">Your Next Trip — Hurry up for your new tour!</span>
-            <Link href="/umrah-packages" className="font-semibold underline hover:text-secondary-fixed">
+            <Link href="/" className="font-semibold underline hover:text-secondary-fixed">
               Book Now
             </Link>
           </p>
@@ -59,7 +59,7 @@ export function Navbar() {
             </span>
             <span className="flex flex-col leading-none">
               <span className="text-lg font-extrabold tracking-tight text-on-surface">
-                Haram Gateway
+                Sasta Travel
               </span>
               <span className="text-[0.6rem] font-semibold uppercase tracking-[0.35em] text-secondary">
                 Express

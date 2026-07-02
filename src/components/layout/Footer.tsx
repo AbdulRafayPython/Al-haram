@@ -9,7 +9,7 @@ export function Footer() {
       <Container className="grid grid-cols-1 gap-12 py-20 md:grid-cols-12">
         <div className="md:col-span-5">
           <div className="mb-5 text-2xl font-bold text-secondary-fixed">
-            Haram Gateway Express
+            Sasta Travel Express
           </div>
           <p className="mb-8 max-w-sm text-sm leading-relaxed text-on-tertiary/75">
             Your trusted partner for Hajj, Umrah, and international travel. We
@@ -20,7 +20,7 @@ export function Footer() {
             {[
               { icon: "public", href: site.social.facebook, label: "Facebook" },
               { icon: "photo_camera", href: site.social.instagram, label: "Instagram" },
-              { icon: "work", href: site.social.linkedin, label: "LinkedIn" },
+              { icon: "smart_display", href: site.social.youtube, label: "YouTube" },
             ].map((s) => (
               <a
                 key={s.label}
@@ -60,15 +60,9 @@ export function Footer() {
           <p className="mb-5 text-sm text-on-tertiary/75">{site.hours}</p>
           <a
             href={site.phoneHref}
-            className="mb-2 block text-xl font-semibold text-secondary-fixed"
+            className="block text-xl font-semibold text-secondary-fixed"
           >
             {site.phone}
-          </a>
-          <a
-            href={site.emailHref}
-            className="text-sm text-on-tertiary/60 transition-colors hover:text-on-tertiary"
-          >
-            {site.email}
           </a>
         </div>
       </Container>
@@ -76,7 +70,7 @@ export function Footer() {
       <div className="border-t border-on-tertiary/10">
         <Container className="flex flex-col items-center justify-between gap-4 py-6 md:flex-row">
           <p className="text-xs text-on-tertiary/40">
-            © {new Date().getFullYear()} Haram Gateway Express. All rights reserved.
+            © {new Date().getFullYear()} Sasta Travel Express. All rights reserved.
           </p>
           <div className="flex gap-6">
             <Link href="/visas" className="text-xs uppercase tracking-widest text-on-tertiary/40 hover:text-on-tertiary">

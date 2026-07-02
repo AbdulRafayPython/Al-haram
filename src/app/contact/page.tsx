@@ -8,12 +8,11 @@ import { site } from "@/data/site";
 export const metadata: Metadata = {
   title: "Contact Us",
   description:
-    "Get in touch with Haram Gateway Express — call, email, WhatsApp, or visit our Karachi office.",
+    "Get in touch with Sasta Travel Express — call, WhatsApp, or visit our Karachi office.",
 };
 
 const channels = [
   { icon: "call", label: "Call Us", value: site.phone, href: site.phoneHref, note: "24/7 Travel Consultant" },
-  { icon: "mail", label: "Email", value: site.email, href: site.emailHref, note: "We reply within hours" },
   { icon: "chat", label: "WhatsApp", value: "Chat with us", href: site.whatsappHref, note: "Fastest response" },
 ];
 
@@ -31,7 +30,7 @@ export default function ContactPage() {
       {/* Channels */}
       <section className="py-14 md:py-20">
         <Container>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="mx-auto grid max-w-2xl grid-cols-1 gap-6 sm:grid-cols-2">
             {channels.map((c) => (
               <a
                 key={c.label}
@@ -74,7 +73,6 @@ export default function ContactPage() {
                 <Detail icon="location_on" label="Address" value={site.address} />
                 <Detail icon="schedule" label="Office Hours" value={site.hours} />
                 <Detail icon="call" label="Phone" value={site.phone} href={site.phoneHref} />
-                <Detail icon="mail" label="Email" value={site.email} href={site.emailHref} />
               </ul>
             </div>
             <div className="flex aspect-video items-center justify-center rounded-2xl border border-outline-variant/40 bg-gradient-to-br from-primary to-primary-container text-on-primary">
