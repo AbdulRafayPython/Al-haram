@@ -5,149 +5,165 @@ import { Icon } from "@/components/ui/Icon";
 import { PackageCard } from "@/components/packages/PackageCard";
 import { DepartureCalendar } from "@/components/packages/DepartureCalendar";
 import { clsx } from "@/lib/clsx";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatPkr } from "@/lib/format";
 import { departureCities, airlines } from "@/data/packages";
 import type { UmrahPackage } from "@/data/types";
 
-const durations = [14, 21, 28];
-
+/**
+ * Progressive package finder. The filters cascade in a fixed order —
+ * City → Airline → Package → Date — and each step stays locked until the
+ * previous one is chosen, only ever offering options that still have
+ * available packages given the earlier picks.
+ */
 export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
-  // Sold-out departures are never shown, so every filter operates on the
-  // available subset from the start.
+  // Sold-out departures are never shown.
   const availablePackages = useMemo(
     () => packages.filter((p) => p.seatsAvailable > 0),
     [packages],
   );
 
-  // With no "all" option on any dropdown, default every field to the
-  // soonest available departure so the board never opens on an empty result.
-  const defaults = useMemo(() => {
-    const earliest = [...availablePackages].sort(
-      (a, b) => +new Date(a.departureDate) - +new Date(b.departureDate),
-    )[0];
-    return {
-      city: earliest?.departureCityCode ?? departureCities[0].code,
-      airline: earliest?.airline ?? airlines[0],
-      duration: String(earliest?.durationDays ?? durations[0]),
-    };
-  }, [availablePackages]);
-
-  const [city, setCity] = useState(defaults.city);
-  const [airline, setAirline] = useState(defaults.airline);
-  const [duration, setDuration] = useState(defaults.duration);
-  const [sort, setSort] = useState<"date" | "price-asc" | "price-desc">("date");
+  const [city, setCity] = useState<string | null>(null);
+  const [airline, setAirline] = useState<string | null>(null);
+  const [packageId, setPackageId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [highlight, setHighlight] = useState(false);
 
   const resultsRef = useRef<HTMLDivElement>(null);
 
-  // Everything except the calendar's date filter — also feeds the calendar's
-  // per-day seat counts so they stay in sync with the dropdown filters.
-  const baseFiltered = useMemo(
-    () =>
-      availablePackages.filter((p) => {
-        if (p.departureCityCode !== city) return false;
-        if (p.airline !== airline) return false;
-        if (p.durationDays !== Number(duration)) return false;
-        return true;
-      }),
-    [availablePackages, city, airline, duration],
+  // --- Cascading option lists (each narrows the next) --------------------
+  const cityOptions = useMemo(() => {
+    const codes = new Set(availablePackages.map((p) => p.departureCityCode));
+    return departureCities.filter((c) => codes.has(c.code));
+  }, [availablePackages]);
+
+  const airlineOptions = useMemo(() => {
+    if (!city) return [];
+    const set = new Set(
+      availablePackages
+        .filter((p) => p.departureCityCode === city)
+        .map((p) => p.airline),
+    );
+    return airlines.filter((a) => set.has(a));
+  }, [availablePackages, city]);
+
+  const packageOptions = useMemo(() => {
+    if (!city || !airline) return [];
+    return availablePackages
+      .filter((p) => p.departureCityCode === city && p.airline === airline)
+      .sort((a, b) => +new Date(a.departureDate) - +new Date(b.departureDate));
+  }, [availablePackages, city, airline]);
+
+  // Calendar only reflects the chosen package's departure date(s).
+  const calendarPackages = useMemo(
+    () => (packageId ? availablePackages.filter((p) => p.id === packageId) : []),
+    [availablePackages, packageId],
   );
 
-  const filtered = useMemo(() => {
-    const result = (
-      selectedDate
-        ? baseFiltered.filter((p) => p.departureDate === selectedDate)
-        : baseFiltered
-    ).slice();
+  const results = useMemo(() => {
+    if (!packageId || !selectedDate) return [];
+    return availablePackages.filter(
+      (p) => p.id === packageId && p.departureDate === selectedDate,
+    );
+  }, [availablePackages, packageId, selectedDate]);
 
-    result.sort((a, b) => {
-      if (sort === "price-asc") return a.pricePkr - b.pricePkr;
-      if (sort === "price-desc") return b.pricePkr - a.pricePkr;
-      return +new Date(a.departureDate) - +new Date(b.departureDate);
-    });
-    return result;
-  }, [baseFiltered, selectedDate, sort]);
+  // --- Cascading resets: changing a step clears everything downstream ----
+  const onCityChange = (v: string) => {
+    setCity(v);
+    setAirline(null);
+    setPackageId(null);
+    setSelectedDate(null);
+  };
+  const onAirlineChange = (v: string) => {
+    setAirline(v);
+    setPackageId(null);
+    setSelectedDate(null);
+  };
+  const onPackageChange = (v: string) => {
+    setPackageId(v);
+    setSelectedDate(null);
+  };
+  const handleSelectDate = (date: string) => {
+    setSelectedDate((prev) => (prev === date ? null : date));
+  };
+  const reset = () => {
+    setCity(null);
+    setAirline(null);
+    setPackageId(null);
+    setSelectedDate(null);
+  };
 
-  // When a calendar day is picked, bring the matching cards into view so the
-  // user never has to hunt for where the results appeared.
+  // Bring the matching package into view once a date is picked.
   useEffect(() => {
-    if (!selectedDate || !resultsRef.current) return;
-
+    if (!results.length || !resultsRef.current) return;
     const reduceMotion =
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
     resultsRef.current.scrollIntoView({
       behavior: reduceMotion ? "auto" : "smooth",
       block: "start",
     });
-
     setHighlight(true);
-    const timer = window.setTimeout(() => setHighlight(false), 1400);
-    return () => window.clearTimeout(timer);
-  }, [selectedDate]);
+    const t = window.setTimeout(() => setHighlight(false), 1400);
+    return () => window.clearTimeout(t);
+  }, [results.length]);
 
-  const handleSelectDate = (date: string) => {
-    setSelectedDate((prev) => (prev === date ? null : date));
-  };
-
-  const reset = () => {
-    setCity(defaults.city);
-    setAirline(defaults.airline);
-    setDuration(defaults.duration);
-    setSort("date");
-    setSelectedDate(null);
-  };
-
-  const hasFilters =
-    city !== defaults.city ||
-    airline !== defaults.airline ||
-    duration !== defaults.duration ||
-    selectedDate !== null;
+  const stepHint = !city
+    ? "Select your departure city to begin."
+    : !airline
+      ? "Now choose your airline."
+      : !packageId
+        ? "Select a package to continue."
+        : !selectedDate
+          ? "Almost there — pick your departure date from the calendar above."
+          : "No packages match your selection.";
 
   return (
     <div>
-      {/* Filters + departure calendar */}
+      {/* Progressive filters */}
       <div className="rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-5 shadow-sm">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Field label="Departure City">
-            <Select value={city} onChange={setCity}>
-              {departureCities.map((c) => (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Field label="1 · Departure City">
+            <Select value={city} onChange={onCityChange} placeholder="Select City">
+              {cityOptions.map((c) => (
                 <option key={c.code} value={c.code}>
                   {c.name} ({c.code})
                 </option>
               ))}
             </Select>
           </Field>
-          <Field label="Airline">
-            <Select value={airline} onChange={setAirline}>
-              {airlines.map((a) => (
+
+          <Field label="2 · Airline" muted={!city}>
+            <Select
+              value={airline}
+              onChange={onAirlineChange}
+              placeholder="Select Airline"
+              disabled={!city}
+            >
+              {airlineOptions.map((a) => (
                 <option key={a} value={a}>
                   {a}
                 </option>
               ))}
             </Select>
           </Field>
-          <Field label="Duration">
-            <Select value={duration} onChange={setDuration}>
-              {durations.map((d) => (
-                <option key={d} value={d}>
-                  {d} days
+
+          <Field label="3 · Package" muted={!airline}>
+            <Select
+              value={packageId}
+              onChange={onPackageChange}
+              placeholder="Select Package"
+              disabled={!airline}
+            >
+              {packageOptions.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title} · {formatPkr(p.pricePkr)}
                 </option>
               ))}
             </Select>
           </Field>
-          <Field label="Sort By">
-            <Select value={sort} onChange={(v) => setSort(v as typeof sort)}>
-              <option value="date">Earliest Departure</option>
-              <option value="price-asc">Price: Low to High</option>
-              <option value="price-desc">Price: High to Low</option>
-            </Select>
-          </Field>
         </div>
 
-        {hasFilters && (
+        {city && (
           <div className="mt-4 flex justify-end">
             <button
               onClick={reset}
@@ -158,94 +174,69 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
           </div>
         )}
 
-        {/* Departure calendar — merged into the filters card */}
-        <div className="mt-5 border-t border-outline-variant/40 pt-5">
-          <div className="flex flex-wrap items-end justify-between gap-2">
-            <div>
-              <h3 className="font-[var(--font-heading)] text-lg text-on-surface md:text-xl">
-                Departure Calendar
-              </h3>
-              <p className="mt-1 text-sm text-on-surface-variant">
-                Tap any highlighted day — we&rsquo;ll jump you straight to its
-                packages below.
-              </p>
+        {/* Step 4 — calendar appears only after a package is chosen */}
+        {packageId && (
+          <div className="mt-5 border-t border-outline-variant/40 pt-5">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <h3 className="font-[var(--font-heading)] text-lg text-on-surface md:text-xl">
+                  4 · Choose a Departure Date
+                </h3>
+                <p className="mt-1 text-sm text-on-surface-variant">
+                  Tap the highlighted day to see your package details below.
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 text-xs text-on-surface-variant">
+                <span className="h-2.5 w-2.5 rounded-sm border border-secondary/40 bg-secondary-container" />
+                Seats open
+              </span>
             </div>
-            <span className="inline-flex items-center gap-1.5 text-xs text-on-surface-variant">
-              <span className="h-2.5 w-2.5 rounded-sm border border-secondary/40 bg-secondary-container" />
-              Seats open
-            </span>
+            <div className="mt-4">
+              <DepartureCalendar
+                packages={calendarPackages}
+                selectedDate={selectedDate}
+                onSelect={handleSelectDate}
+              />
+            </div>
           </div>
-
-          <div className="mt-4">
-            <DepartureCalendar
-              packages={baseFiltered}
-              selectedDate={selectedDate}
-              onSelect={handleSelectDate}
-            />
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Results */}
       <div ref={resultsRef} className="mt-10 scroll-mt-28">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          {selectedDate ? (
-            <span className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-on-primary">
-              <Icon name="event" className="text-base text-secondary-fixed" />
-              Departures on {formatDate(selectedDate)}
-              <button
-                onClick={() => setSelectedDate(null)}
-                aria-label="Clear selected date"
-                className="-mr-1 ml-1 inline-flex items-center rounded-full p-0.5 transition-colors hover:bg-on-primary/15"
-              >
-                <Icon name="close" className="text-base" />
-              </button>
-            </span>
-          ) : (
-            <p className="text-sm text-on-surface-variant">
-              Showing{" "}
-              <span className="font-semibold text-on-surface">{filtered.length}</span> of{" "}
-              {availablePackages.length} departures
-            </p>
-          )}
-
-          {selectedDate && (
-            <p className="text-sm text-on-surface-variant">
-              <span className="font-semibold text-on-surface">{filtered.length}</span>{" "}
-              package{filtered.length === 1 ? "" : "s"} on this date
-            </p>
-          )}
-        </div>
-
-        {filtered.length > 0 ? (
-          <div
-            className={clsx(
-              "mt-5 grid grid-cols-1 gap-6 rounded-2xl p-1 md:grid-cols-2 lg:grid-cols-3",
-              "transition-shadow duration-700",
-              highlight && "shadow-[0_0_0_3px_var(--color-secondary-fixed)]",
-            )}
-          >
-            {filtered.map((pkg) => (
-              <PackageCard key={pkg.id} pkg={pkg} />
-            ))}
-          </div>
+        {results.length > 0 ? (
+          <>
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <span className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-on-primary">
+                <Icon name="event" className="text-base text-secondary-fixed" />
+                Departure on {formatDate(selectedDate!)}
+              </span>
+              <p className="text-sm text-on-surface-variant">
+                <span className="font-semibold text-on-surface">{results.length}</span>{" "}
+                package{results.length === 1 ? "" : "s"} found
+              </p>
+            </div>
+            <div
+              className={clsx(
+                "grid grid-cols-1 gap-6 rounded-2xl p-1 md:grid-cols-2 lg:grid-cols-3",
+                "transition-shadow duration-700",
+                highlight && "shadow-[0_0_0_3px_var(--color-secondary-fixed)]",
+              )}
+            >
+              {results.map((pkg) => (
+                <PackageCard key={pkg.id} pkg={pkg} />
+              ))}
+            </div>
+          </>
         ) : (
-          <div className="mt-5 flex flex-col items-center rounded-xl border border-dashed border-outline-variant bg-surface-container-low p-16 text-center">
-            <Icon name="search_off" className="text-5xl text-on-surface-variant" />
-            <p className="mt-4 font-[var(--font-heading)] text-xl text-on-surface">
-              No matching departures
+          <div className="flex flex-col items-center rounded-xl border border-dashed border-outline-variant bg-surface-container-low p-14 text-center">
+            <Icon name="filter_list" className="text-5xl text-on-surface-variant/70" />
+            <p className="mt-4 font-[var(--font-heading)] text-lg text-on-surface">
+              {stepHint}
             </p>
             <p className="mt-1 text-sm text-on-surface-variant">
-              {selectedDate
-                ? "No packages on this date match your filters. Try clearing the date or widening your filters."
-                : "Try widening your filters or reset to see everything."}
+              Follow the steps above to find your ideal Umrah package.
             </p>
-            <button
-              onClick={reset}
-              className="mt-5 inline-flex items-center gap-1 rounded-lg bg-primary px-5 py-2.5 text-xs font-semibold uppercase tracking-widest text-on-primary"
-            >
-              Reset filters
-            </button>
           </div>
         )}
       </div>
@@ -253,10 +244,23 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  muted,
+  children,
+}: {
+  label: string;
+  muted?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
+      <span
+        className={clsx(
+          "mb-1.5 block text-xs font-semibold uppercase tracking-wider",
+          muted ? "text-on-surface-variant/50" : "text-on-surface-variant",
+        )}
+      >
         {label}
       </span>
       {children}
@@ -267,26 +271,35 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function Select({
   value,
   onChange,
+  placeholder,
+  disabled,
   children,
 }: {
-  value: string;
+  value: string | null;
   onChange: (v: string) => void;
+  placeholder: string;
+  disabled?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div className="relative">
       <select
-        value={value}
+        value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
         className={clsx(
           "w-full appearance-none rounded-lg border border-outline-variant bg-surface px-4 py-2.5 text-sm text-on-surface",
           "focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20",
+          disabled && "cursor-not-allowed opacity-45",
         )}
       >
+        <option value="" disabled>
+          {placeholder}
+        </option>
         {children}
       </select>
       <Icon
-        name="expand_more"
+        name={disabled ? "lock" : "expand_more"}
         className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xl text-on-surface-variant"
       />
     </div>
