@@ -10,10 +10,17 @@ import { departureCities, airlines } from "@/data/packages";
 import type { UmrahPackage } from "@/data/types";
 
 /**
+ * Sentinel used by the "Select All" choices in the Airline and Package
+ * dropdowns. Picking it widens the filter to every option in that step.
+ */
+const ALL = "__all__";
+
+/**
  * Progressive package finder. The filters cascade in a fixed order —
  * City → Airline → Package → Date — and each step stays locked until the
  * previous one is chosen, only ever offering options that still have
- * available packages given the earlier picks.
+ * available packages given the earlier picks. Airline and Package each also
+ * offer a "Select All" choice that opens the step up to every option at once.
  */
 export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
   // Sold-out departures are never shown.
@@ -29,6 +36,7 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
   const [highlight, setHighlight] = useState(false);
 
   const resultsRef = useRef<HTMLDivElement>(null);
+  const calendarRef = useRef<HTMLDivElement>(null);
 
   // --- Cascading option lists (each narrows the next) --------------------
   const cityOptions = useMemo(() => {
@@ -46,25 +54,42 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
     return airlines.filter((a) => set.has(a));
   }, [availablePackages, city]);
 
+  // `airline === ALL` keeps every carrier operating from the chosen city.
+  const matchesAirline = (p: UmrahPackage) => airline === ALL || p.airline === airline;
+
   const packageOptions = useMemo(() => {
     if (!city || !airline) return [];
     return availablePackages
-      .filter((p) => p.departureCityCode === city && p.airline === airline)
+      .filter((p) => p.departureCityCode === city && matchesAirline(p))
       .sort((a, b) => +new Date(a.departureDate) - +new Date(b.departureDate));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [availablePackages, city, airline]);
 
-  // Calendar only reflects the chosen package's departure date(s).
-  const calendarPackages = useMemo(
-    () => (packageId ? availablePackages.filter((p) => p.id === packageId) : []),
-    [availablePackages, packageId],
+  // The calendar shows the whole route's upcoming departures (city + airline,
+  // or city + every airline when "All Airlines" is picked), so multiple months
+  // appear whenever the route flies in more than one month. Months with no
+  // available seats simply never get built, so they stay hidden.
+  const routePackages = useMemo(
+    () =>
+      city && airline
+        ? availablePackages.filter(
+            (p) => p.departureCityCode === city && matchesAirline(p),
+          )
+        : [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [availablePackages, city, airline],
   );
 
   const results = useMemo(() => {
-    if (!packageId || !selectedDate) return [];
+    if (!city || !airline || !selectedDate) return [];
     return availablePackages.filter(
-      (p) => p.id === packageId && p.departureDate === selectedDate,
+      (p) =>
+        p.departureCityCode === city &&
+        matchesAirline(p) &&
+        p.departureDate === selectedDate,
     );
-  }, [availablePackages, packageId, selectedDate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availablePackages, city, airline, selectedDate]);
 
   // --- Cascading resets: changing a step clears everything downstream ----
   const onCityChange = (v: string) => {
@@ -80,10 +105,27 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
   };
   const onPackageChange = (v: string) => {
     setPackageId(v);
-    setSelectedDate(null);
+    if (v === ALL) {
+      // "All Packages" just reveals the calendar; let the user pick any date.
+      setSelectedDate(null);
+      return;
+    }
+    // Jump the calendar straight to the chosen package's departure date.
+    const pkg = availablePackages.find((p) => p.id === v);
+    setSelectedDate(pkg ? pkg.departureDate : null);
   };
   const handleSelectDate = (date: string) => {
-    setSelectedDate((prev) => (prev === date ? null : date));
+    if (selectedDate === date) {
+      setSelectedDate(null);
+      return;
+    }
+    setSelectedDate(date);
+    // Keep the Package dropdown in sync with the departure the user tapped,
+    // unless they're browsing "All Packages" — then leave the choice as-is.
+    if (packageId !== ALL) {
+      const pkg = routePackages.find((p) => p.departureDate === date);
+      if (pkg) setPackageId(pkg.id);
+    }
   };
   const reset = () => {
     setCity(null);
@@ -92,7 +134,24 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
     setSelectedDate(null);
   };
 
-  // Bring the matching package into view once a date is picked.
+  // When the package step is chosen the calendar unfolds — on small screens it
+  // opens below the fold. Scroll it into view so "Choose a Departure Date" and
+  // the calendar aren't cut off. Only runs while no date is picked yet; once a
+  // date is chosen the results-scroll effect below takes over.
+  useEffect(() => {
+    if (!packageId || selectedDate || !calendarRef.current) return;
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    calendarRef.current.scrollIntoView({
+      behavior: reduceMotion ? "auto" : "smooth",
+      block: "start",
+    });
+  }, [packageId, selectedDate]);
+
+  // Once the filters resolve to a set of packages, bring the results section
+  // into view. Keyed on the selected date so every applied date scrolls, even
+  // when consecutive picks happen to return the same number of packages.
   useEffect(() => {
     if (!results.length || !resultsRef.current) return;
     const reduceMotion =
@@ -105,7 +164,7 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
     setHighlight(true);
     const t = window.setTimeout(() => setHighlight(false), 1400);
     return () => window.clearTimeout(t);
-  }, [results.length]);
+  }, [selectedDate, results.length]);
 
   const stepHint = !city
     ? "Select your departure city to begin."
@@ -139,6 +198,7 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
               placeholder="Select Airline"
               disabled={!city}
             >
+              {airlineOptions.length > 1 && <option value={ALL}>All Airlines</option>}
               {airlineOptions.map((a) => (
                 <option key={a} value={a}>
                   {a}
@@ -154,6 +214,7 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
               placeholder="Select Package"
               disabled={!airline}
             >
+              {packageOptions.length > 1 && <option value={ALL}>All Packages</option>}
               {packageOptions.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.title} · {formatPkr(p.pricePkr)}
@@ -176,7 +237,10 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
 
         {/* Step 4 — calendar appears only after a package is chosen */}
         {packageId && (
-          <div className="mt-5 border-t border-outline-variant/40 pt-5">
+          <div
+            ref={calendarRef}
+            className="mt-5 scroll-mt-24 border-t border-outline-variant/40 pt-5"
+          >
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div>
                 <h3 className="font-[var(--font-heading)] text-lg text-on-surface md:text-xl">
@@ -193,7 +257,7 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
             </div>
             <div className="mt-4">
               <DepartureCalendar
-                packages={calendarPackages}
+                packages={routePackages}
                 selectedDate={selectedDate}
                 onSelect={handleSelectDate}
               />

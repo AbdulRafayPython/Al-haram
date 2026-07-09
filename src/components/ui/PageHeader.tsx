@@ -1,6 +1,9 @@
 import { Container } from "@/components/ui/Container";
 import { Icon } from "@/components/ui/Icon";
 import { BlendImage } from "@/components/ui/BlendImage";
+import { clsx } from "@/lib/clsx";
+
+type BlendVariant = "card" | "hero" | "photo" | "tint" | "night";
 
 interface PageHeaderProps {
   eyebrow?: string;
@@ -9,16 +12,41 @@ interface PageHeaderProps {
   icon?: string;
   /** Optional blended background photo for the hero band. */
   image?: string;
+  /** Scrim style for the background photo (default a centered navy tint). */
+  imageVariant?: BlendVariant;
+  /** Tailwind object-position for the photo, e.g. "object-right". */
+  imagePosition?: string;
+  /** Text alignment. "left" gives a taller banner that showcases the photo. */
+  align?: "center" | "left";
   /** Tighter padding + smaller type so below-the-fold content needs less scrolling. */
   compact?: boolean;
 }
 
 /** Consistent dark hero band at the top of every inner page. */
-export function PageHeader({ eyebrow, title, description, icon, image, compact }: PageHeaderProps) {
+export function PageHeader({
+  eyebrow,
+  title,
+  description,
+  icon,
+  image,
+  imageVariant = "hero",
+  imagePosition = "object-center",
+  align = "center",
+  compact,
+}: PageHeaderProps) {
+  const left = align === "left";
+
   return (
-    <section className="relative overflow-hidden bg-primary text-on-primary">
+    <section
+      className={clsx(
+        "relative overflow-hidden bg-primary text-on-primary",
+        // A left-aligned banner gets a bit of extra height so the photo reads,
+        // but stays compact enough to keep the filters below in view.
+        left && "flex items-center min-h-[160px] md:min-h-[190px]",
+      )}
+    >
       {image ? (
-        <BlendImage src={image} variant="hero" position="object-center" />
+        <BlendImage src={image} variant={imageVariant} position={imagePosition} />
       ) : (
         <>
           {icon && (
@@ -30,39 +58,38 @@ export function PageHeader({ eyebrow, title, description, icon, image, compact }
         </>
       )}
       <Container
-        className={
-          compact
-            ? "relative z-10 py-8 text-center md:py-10"
-            : "relative z-10 py-20 text-center md:py-24"
-        }
+        className={clsx(
+          "relative z-10 w-full",
+          compact ? "py-8 md:py-10" : "py-20 md:py-24",
+          left ? "text-left" : "text-center",
+        )}
       >
         {eyebrow && (
           <span
-            className={
-              compact
-                ? "mb-2 block text-xs uppercase tracking-[0.3em] text-secondary-fixed"
-                : "mb-4 block text-sm uppercase tracking-[0.3em] text-secondary-fixed"
-            }
+            className={clsx(
+              "block uppercase tracking-[0.3em] text-secondary-fixed",
+              compact ? "mb-2 text-xs" : "mb-4 text-sm",
+            )}
           >
             {eyebrow}
           </span>
         )}
         <h1
-          className={
-            compact
-              ? "mx-auto max-w-3xl font-[var(--font-display)] text-2xl font-extrabold leading-tight tracking-tight md:text-3xl"
-              : "mx-auto max-w-3xl font-[var(--font-display)] text-4xl font-extrabold leading-tight tracking-tight md:text-5xl"
-          }
+          className={clsx(
+            "font-[var(--font-display)] font-extrabold leading-tight tracking-tight",
+            left ? "max-w-2xl [text-shadow:0_2px_16px_rgb(0_0_0_/_55%)]" : "mx-auto max-w-3xl",
+            compact ? "text-2xl md:text-3xl" : "text-4xl md:text-5xl",
+          )}
         >
           {title}
         </h1>
         {description && (
           <p
-            className={
-              compact
-                ? "mx-auto mt-2 max-w-2xl text-sm text-on-primary/75"
-                : "mx-auto mt-5 max-w-2xl text-lg text-on-primary/75"
-            }
+            className={clsx(
+              "text-on-primary/75",
+              left ? "max-w-xl [text-shadow:0_2px_12px_rgb(0_0_0_/_65%)]" : "mx-auto max-w-2xl",
+              compact ? "mt-2 text-sm" : "mt-5 text-lg",
+            )}
           >
             {description}
           </p>

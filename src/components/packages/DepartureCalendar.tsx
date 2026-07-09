@@ -1,10 +1,28 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Icon } from "@/components/ui/Icon";
 import { clsx } from "@/lib/clsx";
 import type { UmrahPackage } from "@/data/types";
 
+/** How many months the largest layout shows side by side at once. */
+const MAX_VISIBLE = 3;
+
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const SHORT_MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 const MONTH_NAMES = [
   "January",
   "February",
@@ -73,21 +91,136 @@ export function DepartureCalendar({
     return { months, byDate };
   }, [packages]);
 
+  // How many months fit side by side: 1 on phones, 2 on tablets, up to 3 on
+  // desktop. Starts at the desktop default and self-corrects after mount.
+  const [visible, setVisible] = useState(MAX_VISIBLE);
+  useEffect(() => {
+    const mqLg = window.matchMedia("(min-width: 1024px)");
+    const mqSm = window.matchMedia("(min-width: 640px)");
+    const update = () => setVisible(mqLg.matches ? 3 : mqSm.matches ? 2 : 1);
+    update();
+    mqLg.addEventListener("change", update);
+    mqSm.addEventListener("change", update);
+    return () => {
+      mqLg.removeEventListener("change", update);
+      mqSm.removeEventListener("change", update);
+    };
+  }, []);
+
+  // Sliding window over the months. Paging by one keeps navigation smooth and
+  // avoids stranding a lone month on its own page. `windowStart` is driven by
+  // the arrows; `prevSelected`/`prevVisible` let us reconcile it during render.
+  // (A route change unmounts the calendar entirely, so no reset is needed.)
+  const [windowStart, setWindowStart] = useState(0);
+  const [prevSelected, setPrevSelected] = useState<string | null>(null);
+  const [prevVisible, setPrevVisible] = useState(visible);
+
   if (months.length === 0) return null;
 
+  const maxStart = Math.max(0, months.length - visible);
+
+  // Adjust the window while rendering (React's supported alternative to an
+  // effect) so the month holding the selected date stays on-screen — whether it
+  // was set via the Package dropdown or the visible column count just changed —
+  // while still honouring manual paging via the arrows.
+  let start = Math.min(windowStart, maxStart);
+  if ((selectedDate !== prevSelected || visible !== prevVisible) && selectedDate) {
+    const target = selectedDate.slice(0, 7); // YYYY-MM
+    const idx = months.findIndex(
+      (m) => `${m.year}-${String(m.month + 1).padStart(2, "0")}` === target,
+    );
+    if (idx !== -1) {
+      if (idx < start) start = Math.min(idx, maxStart);
+      else if (idx > start + visible - 1) start = Math.min(idx - visible + 1, maxStart);
+    }
+  }
+  if (selectedDate !== prevSelected) setPrevSelected(selectedDate);
+  if (visible !== prevVisible) setPrevVisible(visible);
+  if (start !== windowStart) setWindowStart(start);
+
+  const shown = months.slice(start, start + visible);
+  const canPrev = start > 0;
+  const canNext = start < maxStart;
+  const page = (dir: -1 | 1) =>
+    setWindowStart(Math.min(Math.max(start + dir, 0), maxStart));
+
+  const first = shown[0];
+  const last = shown[shown.length - 1];
+  const rangeLabel =
+    first === last
+      ? `${MONTH_NAMES[first.month]} ${first.year}`
+      : `${SHORT_MONTHS[first.month]} ${first.year} – ${SHORT_MONTHS[last.month]} ${last.year}`;
+
   return (
-    <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-      {months.map((mo) => (
-        <MonthGrid
-          key={`${mo.year}-${mo.month}`}
-          year={mo.year}
-          month={mo.month}
-          byDate={byDate}
-          selectedDate={selectedDate}
-          onSelect={onSelect}
-        />
-      ))}
+    <div>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <p className="text-sm font-medium text-on-surface">{rangeLabel}</p>
+        {months.length > visible && (
+          <div className="flex items-center gap-1.5">
+            <NavButton
+              icon="chevron_left"
+              label="Previous months"
+              disabled={!canPrev}
+              onClick={() => page(-1)}
+            />
+            <NavButton
+              icon="chevron_right"
+              label="Next months"
+              disabled={!canNext}
+              onClick={() => page(1)}
+            />
+          </div>
+        )}
+      </div>
+
+      <div
+        className="grid gap-3"
+        style={{
+          gridTemplateColumns: `repeat(${Math.max(shown.length, 1)}, minmax(0, 1fr))`,
+        }}
+      >
+        {shown.map((mo) => (
+          <MonthGrid
+            key={`${mo.year}-${mo.month}`}
+            year={mo.year}
+            month={mo.month}
+            byDate={byDate}
+            selectedDate={selectedDate}
+            onSelect={onSelect}
+          />
+        ))}
+      </div>
     </div>
+  );
+}
+
+function NavButton({
+  icon,
+  label,
+  disabled,
+  onClick,
+}: {
+  icon: string;
+  label: string;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      className={clsx(
+        "flex h-8 w-8 items-center justify-center rounded-full border border-outline-variant/60 text-on-surface transition-colors",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary-fixed",
+        disabled
+          ? "cursor-not-allowed opacity-35"
+          : "hover:border-secondary hover:bg-secondary-container/50",
+      )}
+    >
+      <Icon name={icon} className="text-xl" />
+    </button>
   );
 }
 
@@ -112,17 +245,17 @@ function MonthGrid({
   ];
 
   return (
-    <div className="rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-4 shadow-sm">
-      <p className="mb-3 flex items-baseline justify-between font-[var(--font-heading)] text-lg text-on-surface">
+    <div className="rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-2.5 shadow-sm">
+      <p className="mb-1.5 flex items-baseline justify-between font-[var(--font-heading)] text-sm text-on-surface">
         {MONTH_NAMES[month]}
-        <span className="text-sm font-medium text-on-surface-variant">{year}</span>
+        <span className="text-[0.7rem] font-medium text-on-surface-variant">{year}</span>
       </p>
 
-      <div className="grid grid-cols-7 gap-1 text-center">
+      <div className="grid grid-cols-7 gap-0.5 text-center">
         {WEEKDAYS.map((d) => (
           <span
             key={d}
-            className="pb-1 text-[0.6rem] font-semibold uppercase tracking-wider text-on-surface-variant"
+            className="pb-0.5 text-[0.5rem] font-semibold uppercase tracking-wide text-on-surface-variant"
           >
             {d}
           </span>
@@ -139,7 +272,7 @@ function MonthGrid({
             return (
               <span
                 key={key}
-                className="flex aspect-square items-center justify-center rounded-md text-sm text-on-surface-variant/35"
+                className="flex h-7 items-center justify-center rounded-md text-[0.7rem] text-on-surface-variant/35"
               >
                 {day}
               </span>
@@ -156,17 +289,17 @@ function MonthGrid({
               aria-pressed={isSelected}
               aria-label={`${day} ${MONTH_NAMES[month]} ${year} — ${seatLabel}`}
               className={clsx(
-                "flex aspect-square flex-col items-center justify-center rounded-md text-sm font-semibold transition-all",
+                "flex h-7 flex-col items-center justify-center rounded-md text-[0.7rem] font-semibold leading-none transition-all",
                 "focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary-fixed",
                 isSelected
                   ? "bg-primary text-on-primary shadow-md ring-2 ring-secondary-fixed"
                   : "border border-secondary/25 bg-secondary-container/40 text-on-surface hover:bg-secondary-container hover:shadow-sm",
               )}
             >
-              <span className="leading-none">{day}</span>
+              <span>{day}</span>
               <span
                 className={clsx(
-                  "mt-0.5 text-[0.55rem] font-medium leading-none",
+                  "mt-0.5 text-[0.5rem] font-medium",
                   isSelected ? "text-secondary-fixed" : "text-secondary",
                 )}
               >

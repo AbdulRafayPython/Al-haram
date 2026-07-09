@@ -38,6 +38,10 @@ export const metadata: Metadata = {
     template: `%s | ${site.name}`,
   },
   description: site.description,
+  icons: {
+    icon: "/logo/546cf85e-7042-499d-ba1f-b16d10355d92.jpeg",
+    apple: "/logo/546cf85e-7042-499d-ba1f-b16d10355d92.jpeg",
+  },
 };
 
 export default function RootLayout({

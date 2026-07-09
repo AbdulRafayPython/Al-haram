@@ -54,9 +54,14 @@ export function Navbar() {
       <nav className="sticky top-0 z-50 border-b border-outline-variant/60 bg-surface/95 shadow-sm backdrop-blur-md">
         <Container className="flex items-center justify-between py-3.5">
           <Link href="/" className="flex items-center gap-2.5">
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-secondary-fixed">
-              <Icon name="mosque" className="text-2xl" />
-            </span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo/546cf85e-7042-499d-ba1f-b16d10355d92.jpeg"
+              alt="Sasta Travel Express"
+              width={44}
+              height={44}
+              className="h-11 w-11 shrink-0 rounded-full object-cover"
+            />
             <span className="flex flex-col leading-none">
               <span className="text-lg font-extrabold tracking-tight text-on-surface">
                 Sasta Travel

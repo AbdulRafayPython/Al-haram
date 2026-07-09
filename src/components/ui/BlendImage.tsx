@@ -1,10 +1,10 @@
 import { clsx } from "@/lib/clsx";
 
-type BlendVariant = "card" | "hero" | "photo" | "tint";
+type BlendVariant = "card" | "hero" | "photo" | "tint" | "night";
 
 /**
- * Navy "scrim" applied over the photo so it blends into the brand and keeps
- * overlaid text readable. Each variant tunes how much of the image shows.
+ * Scrim applied over the photo so it blends into the brand and keeps overlaid
+ * text readable. Each variant tunes how much of the image shows.
  */
 const scrims: Record<BlendVariant, string> = {
   // Text sits on the left; photo bleeds in from the right.
@@ -15,6 +15,10 @@ const scrims: Record<BlendVariant, string> = {
   photo: "bg-gradient-to-t from-primary/85 via-primary/10 to-transparent",
   // Barely-there texture behind an otherwise solid navy panel.
   tint: "bg-primary/85",
+  // Already-dark night photo — a neutral near-black fade on the left keeps
+  // left-aligned text readable while the bright subject on the right shows
+  // through untouched (no blue tint).
+  night: "bg-gradient-to-r from-background via-background/55 to-transparent",
 };
 
 interface BlendImageProps {

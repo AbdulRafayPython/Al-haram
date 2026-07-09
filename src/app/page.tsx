@@ -26,8 +26,10 @@ export default function UmrahPackagesPage() {
         eyebrow="Live Availability"
         title="Umrah Packages from Pakistan"
         description="Real-time departures with airline, hotel, room type, and seat status. Filter to find the journey that fits you."
-        icon="flight_class"
-        image="/images/kaaba.jpg"
+        image="/images/umrah-package.png"
+        imageVariant="night"
+        imagePosition="object-[72%_30%] md:object-[center_28%]"
+        align="left"
         compact
       />
 
