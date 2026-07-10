@@ -157,13 +157,33 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
     const reduceMotion =
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    resultsRef.current.scrollIntoView({
-      behavior: reduceMotion ? "auto" : "smooth",
-      block: "start",
+    const behavior: ScrollBehavior = reduceMotion ? "auto" : "smooth";
+
+    // Defer to the next frame so the freshly-rendered card is measured, then
+    // scroll enough to reveal the *whole* card — including the bottom "Included
+    // services" strip — instead of just aligning its top (which, on a card this
+    // tall, left the last row below the fold).
+    const raf = requestAnimationFrame(() => {
+      const el = resultsRef.current;
+      if (!el) return;
+      const navOffset = 80; // clear the sticky navbar
+      const bottomGap = 24; // breathing room beneath the card
+      const rect = el.getBoundingClientRect();
+      const vh = window.innerHeight;
+      const absTop = window.scrollY + rect.top;
+      const fits = rect.height <= vh - navOffset - bottomGap;
+      const target = fits
+        ? absTop - navOffset // whole card fits: align its top under the navbar
+        : absTop + rect.height - vh + bottomGap; // taller than viewport: show the bottom
+      window.scrollTo({ top: Math.max(0, target), behavior });
     });
+
     setHighlight(true);
     const t = window.setTimeout(() => setHighlight(false), 1400);
-    return () => window.clearTimeout(t);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(t);
+    };
   }, [selectedDate, results.length]);
 
   const stepHint = !city
@@ -282,7 +302,7 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
             </div>
             <div
               className={clsx(
-                "grid grid-cols-1 gap-6 rounded-2xl p-1 md:grid-cols-2 lg:grid-cols-3",
+                "grid grid-cols-1 gap-6 rounded-2xl p-1",
                 "transition-shadow duration-700",
                 highlight && "shadow-[0_0_0_3px_var(--color-secondary-fixed)]",
               )}

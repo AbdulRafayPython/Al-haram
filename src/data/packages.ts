@@ -19,7 +19,98 @@ export const airlines = [
   "SalamAir",
 ];
 
-export const packages: UmrahPackage[] = [
+// --- Enrichment -------------------------------------------------------------
+// The board data is seeded with the essentials; the richer detail every card
+// shows (flight legs, hotel nights split + location, booking codes, per-room
+// pricing) is derived here so it stays consistent and in one place.
+
+/** IATA-style flight-number prefix per carrier. */
+const FLIGHT_CODES: Record<string, string> = {
+  Saudia: "SV",
+  PIA: "PK",
+  "Fly Jinnah": "9P",
+  Airblue: "PA",
+  Emirates: "EK",
+  FlyDubai: "FZ",
+  "Air Arabia": "G9",
+  SalamAir: "OV",
+};
+
+const MAKKAH_LOCATIONS: Record<string, string> = {
+  "Fakhir Al Azizia": "Al Aziziyah · Shuttle to Haram",
+  "Anjum Makkah": "Umm Al Qura Rd · 200 m to Haram",
+  "Dar Al Eiman Grand": "King Abdul Aziz Endowment · Facing Haram",
+  "Areej Al Zahbi": "Ajyad St · 550 m to Haram",
+  "Al Kiswah Towers": "Jabal Al Kaaba · 400 m to Haram",
+  "Rawabi Al Zahra": "Al Ghazza St · 900 m · Shuttle",
+};
+
+const MADINAH_LOCATIONS: Record<string, string> = {
+  "Manazil Marjan": "Markaziyah Janoubiyah · 300 m to Masjid Nabawi",
+  "Frontel Al Harithia": "Central Zone · 250 m to Masjid Nabawi",
+  "Taiba Front Hotel": "King Fahd Rd · Facing Masjid Nabawi",
+  "Bir Al Eiman": "Al Haram Area · 350 m to Masjid Nabawi",
+  "Al Eiman Royal": "Central Zone · 200 m to Masjid Nabawi",
+};
+
+const OUTBOUND_TIMES = ["4:45 PM", "2:10 AM", "11:20 PM", "9:05 AM", "6:30 PM"];
+const INBOUND_TIMES = ["3:05 PM", "1:40 AM", "10:15 PM", "8:25 AM", "5:50 PM"];
+const DEPARTURE_TIMES = ["7:30 PM", "5:15 AM", "1:55 AM", "11:40 AM", "9:10 PM"];
+const ARRIVAL_TIMES = ["8:30 AM", "6:45 AM", "3:20 AM", "1:05 PM", "10:35 AM"];
+
+function addDays(iso: string, days: number): string {
+  const d = new Date(iso);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Fill in the presentational detail every package card renders. */
+function enrich(base: UmrahPackage, i: number): UmrahPackage {
+  const nights = base.durationDays;
+  const makkahNights = Math.round(nights * 0.6);
+  const madinahNights = nights - makkahNights;
+
+  const prefix = FLIGHT_CODES[base.airline] ?? "XX";
+  const flightNo = 800 + (i % 5) * 2; // stable per-package, avoids clashes
+  const slot = i % OUTBOUND_TIMES.length;
+
+  // Last two digits of the package id → booking codes (UP-1003xx / UG-1003xx).
+  const serial = base.id.slice(-2);
+
+  const sharing = base.pricePkr;
+  const pricing = {
+    sharing,
+    quad: sharing + 6300,
+    triple: sharing + 21400,
+    double: sharing + 51600,
+    infant: 75000,
+  };
+
+  return {
+    ...base,
+    returnDate: addDays(base.departureDate, nights),
+    makkahNights,
+    madinahNights,
+    makkahLocation:
+      MAKKAH_LOCATIONS[base.makkahHotel] ?? "Central Makkah · Shuttle to Haram",
+    madinahLocation:
+      MADINAH_LOCATIONS[base.madinahHotel] ?? "Central Madinah · Near Masjid Nabawi",
+    packageCode: `UP-1003${serial}`,
+    groupCode: `UG-1003${serial}`,
+    flight: {
+      route: `${base.departureCityCode} → JED`,
+      outboundNo: `${prefix}-${flightNo + 1}`,
+      inboundNo: `${prefix}-${flightNo}`,
+      outboundTime: OUTBOUND_TIMES[slot],
+      inboundTime: INBOUND_TIMES[slot],
+      departureTime: DEPARTURE_TIMES[slot],
+      arrivalTime: ARRIVAL_TIMES[slot],
+    },
+    pricing,
+  };
+}
+
+const rawPackages: UmrahPackage[] = [
   {
     id: "pkg-khi-001",
     title: "Economy Umrah — Karachi",
@@ -174,6 +265,17 @@ export const packages: UmrahPackage[] = [
     seatsAvailable: 27,
   },
 ];
+
+export const packages: UmrahPackage[] = rawPackages.map(enrich);
+
+/** Services bundled into every Umrah package. */
+export const includedServices = [
+  "Accommodation",
+  "Transport",
+  "Visa",
+  "Return Ticket",
+  "Premium Support",
+] as const;
 
 export const packageStats = {
   departures: 205,
