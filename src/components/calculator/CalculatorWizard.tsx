@@ -4,10 +4,8 @@ import { useMemo, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { clsx } from "@/lib/clsx";
 import { formatPkr, formatSar, formatNumber } from "@/lib/format";
-import { hotels } from "@/data/hotels";
-import { visas } from "@/data/visas";
 import { site } from "@/data/site";
-import type { Hotel } from "@/data/types";
+import type { Hotel, Visa } from "@/data/types";
 
 /** SAR → PKR conversion used for the estimate (configurable). */
 const SAR_TO_PKR = 75;
@@ -20,13 +18,13 @@ const roomOptions = [
 
 type RoomKey = (typeof roomOptions)[number]["key"];
 
-const makkahHotels = hotels.filter((h) => h.city === "Makkah");
-const madinahHotels = hotels.filter((h) => h.city === "Madinah");
-
 const steps = ["Travelers", "Visa", "Makkah", "Madinah", "Estimate"] as const;
 
-export function CalculatorWizard() {
+export function CalculatorWizard({ hotels, visas }: { hotels: Hotel[]; visas: Visa[] }) {
   const [step, setStep] = useState(0);
+
+  const makkahHotels = useMemo(() => hotels.filter((h) => h.city === "Makkah"), [hotels]);
+  const madinahHotels = useMemo(() => hotels.filter((h) => h.city === "Madinah"), [hotels]);
 
   // Travelers
   const [withBed, setWithBed] = useState(2);

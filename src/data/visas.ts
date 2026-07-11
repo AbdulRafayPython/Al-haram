@@ -1,40 +1,4 @@
-import type { Visa } from "./types";
-
-export const visas: Visa[] = [
-  {
-    id: "umrah-20",
-    type: "Umrah",
-    title: "20 Days Umrah Visa",
-    country: "Saudi Arabia",
-    mode: "E-Visa",
-    validityDays: 20,
-    processingDays: 7,
-    pricePkr: 700,
-    note: "Taxes included per person",
-  },
-  {
-    id: "umrah-28",
-    type: "Umrah",
-    title: "28 Days Umrah Visa",
-    country: "Saudi Arabia",
-    mode: "E-Visa",
-    validityDays: 28,
-    processingDays: 7,
-    pricePkr: 950,
-    note: "Taxes included per person",
-  },
-  {
-    id: "umrah-80",
-    type: "Umrah",
-    title: "80 Days Umrah Visa",
-    country: "Saudi Arabia",
-    mode: "E-Visa",
-    validityDays: 80,
-    processingDays: 7,
-    pricePkr: 1150,
-    note: "Taxes included per person",
-  },
-];
+/** Visa price tiers are DB-backed — see src/lib/data/visas.ts. */
 
 export const visaFaqs = [
   {

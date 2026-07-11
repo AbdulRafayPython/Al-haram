@@ -3,7 +3,7 @@ import { Container } from "@/components/ui/Container";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Icon } from "@/components/ui/Icon";
 import { TransportTable } from "@/components/transport/TransportTable";
-import { transportRates, transportStats } from "@/data/transport";
+import { getTransportRates, getTransportStats } from "@/lib/data/transport";
 import { formatSar } from "@/lib/format";
 
 export const metadata: Metadata = {
@@ -12,14 +12,17 @@ export const metadata: Metadata = {
     "Airport transfers, hotel transfers, railway transfers, and ziyarat routes by vehicle type and SAR rate.",
 };
 
-const summary = [
-  { icon: "route", value: transportStats.total, label: "Transport Rates" },
-  { icon: "directions_car", value: transportStats.vehicleGroups, label: "Vehicle Groups" },
-  { icon: "handshake", value: transportStats.partners, label: "Trusted Partner" },
-  { icon: "payments", value: formatSar(transportStats.lowest), label: "Lowest Rate" },
-];
+export default async function SaudiTransportPage() {
+  const transportRates = await getTransportRates();
+  const transportStats = getTransportStats(transportRates);
 
-export default function SaudiTransportPage() {
+  const summary = [
+    { icon: "route", value: transportStats.total, label: "Transport Rates" },
+    { icon: "directions_car", value: transportStats.vehicleGroups, label: "Vehicle Groups" },
+    { icon: "handshake", value: transportStats.partners, label: "Trusted Partner" },
+    { icon: "payments", value: formatSar(transportStats.lowest), label: "Lowest Rate" },
+  ];
+
   return (
     <>
       <PageHeader

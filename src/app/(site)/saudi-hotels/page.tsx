@@ -3,7 +3,7 @@ import { Container } from "@/components/ui/Container";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Icon } from "@/components/ui/Icon";
 import { HotelGallery } from "@/components/hotels/HotelGallery";
-import { hotels, hotelStats } from "@/data/hotels";
+import { getHotels, getHotelStats } from "@/lib/data/hotels";
 
 export const metadata: Metadata = {
   title: "Makkah & Madinah Hotels",
@@ -11,14 +11,17 @@ export const metadata: Metadata = {
     "Browse Saudi hotels in Makkah and Madinah by distance from Haram, room type, and nightly rate in SAR.",
 };
 
-const summary = [
-  { icon: "apartment", value: hotelStats.total, label: "Total Hotels" },
-  { icon: "mosque", value: hotelStats.makkah, label: "Makkah Hotels" },
-  { icon: "local_hotel", value: hotelStats.madinah, label: "Madinah Hotels" },
-  { icon: "photo_library", value: hotelStats.withImages, label: "With Photos" },
-];
+export default async function SaudiHotelsPage() {
+  const hotels = await getHotels();
+  const hotelStats = getHotelStats(hotels);
 
-export default function SaudiHotelsPage() {
+  const summary = [
+    { icon: "apartment", value: hotelStats.total, label: "Total Hotels" },
+    { icon: "mosque", value: hotelStats.makkah, label: "Makkah Hotels" },
+    { icon: "local_hotel", value: hotelStats.madinah, label: "Madinah Hotels" },
+    { icon: "photo_library", value: hotelStats.withImages, label: "With Photos" },
+  ];
+
   return (
     <>
       <PageHeader

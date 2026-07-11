@@ -4,11 +4,8 @@ import { useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { clsx } from "@/lib/clsx";
 import { site } from "@/data/site";
+import { submitContact } from "@/lib/actions/contact";
 
-/**
- * Contact form. Front-end only for now — on submit it composes a WhatsApp
- * message. Swap `handleSubmit` for a Supabase insert / server action later.
- */
 export function ContactForm() {
   const [sent, setSent] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", email: "", message: "" });
@@ -18,6 +15,7 @@ export function ContactForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    void submitContact(form);
     const text = `Enquiry from ${form.name}%0APhone: ${form.phone}%0AEmail: ${form.email}%0A%0A${form.message}`;
     window.open(`${site.whatsappHref}?text=${text}`, "_blank", "noopener,noreferrer");
     setSent(true);

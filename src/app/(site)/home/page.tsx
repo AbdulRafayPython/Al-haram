@@ -7,8 +7,9 @@ import { Reveal } from "@/components/ui/Reveal";
 import { BoardCard } from "@/components/home/BoardCard";
 import { Hero } from "@/components/home/Hero";
 import { BlendImage } from "@/components/ui/BlendImage";
-import { airlines, testimonials } from "@/data/packages";
-import { visas } from "@/data/visas";
+import { airlines } from "@/data/packages";
+import { getVisas } from "@/lib/data/visas";
+import { getTestimonials } from "@/lib/data/testimonials";
 import { stats, site } from "@/data/site";
 import { formatPkr } from "@/lib/format";
 
@@ -73,7 +74,9 @@ const features = [
   { icon: "verified", accent: "green", title: "Trusted Travel Partners", desc: "We work with established airlines, hotels, and ground-service providers across the journey." },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [visas, testimonials] = await Promise.all([getVisas(), getTestimonials()]);
+
   return (
     <>
       {/* ---------------- Hero ---------------- */}

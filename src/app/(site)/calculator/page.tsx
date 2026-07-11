@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Container } from "@/components/ui/Container";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { CalculatorWizard } from "@/components/calculator/CalculatorWizard";
+import { getHotels } from "@/lib/data/hotels";
+import { getVisas } from "@/lib/data/visas";
 
 export const metadata: Metadata = {
   title: "Umrah Package Calculator",
@@ -9,7 +11,9 @@ export const metadata: Metadata = {
     "Estimate your Umrah trip cost step by step — travelers, visa, Makkah and Madinah hotels — with a live total in SAR and PKR.",
 };
 
-export default function CalculatorPage() {
+export default async function CalculatorPage() {
+  const [hotels, visas] = await Promise.all([getHotels(), getVisas()]);
+
   return (
     <>
       <PageHeader
@@ -21,7 +25,7 @@ export default function CalculatorPage() {
       />
       <section className="py-14 md:py-20">
         <Container>
-          <CalculatorWizard />
+          <CalculatorWizard hotels={hotels} visas={visas} />
         </Container>
       </section>
     </>

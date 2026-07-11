@@ -3,7 +3,7 @@ import { Container } from "@/components/ui/Container";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Icon } from "@/components/ui/Icon";
 import { PackageBoard } from "@/components/packages/PackageBoard";
-import { packages, packageStats, cityBreakdown } from "@/data/packages";
+import { getPublishedPackages, getPackageStats, getCityBreakdown } from "@/lib/data/packages";
 import { formatNumber } from "@/lib/format";
 
 export const metadata: Metadata = {
@@ -12,14 +12,22 @@ export const metadata: Metadata = {
     "Browse live Umrah package availability from Karachi, Islamabad, Lahore, Multan, and Peshawar with airlines, hotels, seats, and rates.",
 };
 
-const summary = [
-  { icon: "flight_takeoff", value: formatNumber(packageStats.departures), label: "Total Departures" },
-  { icon: "event_seat", value: formatNumber(packageStats.seatsAvailable), label: "Available Seats" },
-  { icon: "do_not_disturb_on", value: formatNumber(packageStats.soldOut), label: "Sold Out" },
-  { icon: "hotel", value: formatNumber(packageStats.variants), label: "Hotel Variants" },
-];
+// Seat counts change whenever the admin adds or edits a departure, so this
+// page always reflects the database rather than a build-time snapshot.
+export const dynamic = "force-dynamic";
 
-export default function UmrahPackagesPage() {
+export default async function UmrahPackagesPage() {
+  const packages = await getPublishedPackages();
+  const packageStats = getPackageStats(packages);
+  const cityBreakdown = getCityBreakdown(packages);
+
+  const summary = [
+    { icon: "flight_takeoff", value: formatNumber(packageStats.departures), label: "Total Departures" },
+    { icon: "event_seat", value: formatNumber(packageStats.seatsAvailable), label: "Available Seats" },
+    { icon: "do_not_disturb_on", value: formatNumber(packageStats.soldOut), label: "Sold Out" },
+    { icon: "hotel", value: formatNumber(packageStats.hotelVariants), label: "Hotel Variants" },
+  ];
+
   return (
     <>
       <PageHeader

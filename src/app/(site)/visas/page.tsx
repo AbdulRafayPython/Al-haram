@@ -7,7 +7,8 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Accordion } from "@/components/ui/Accordion";
 import { clsx } from "@/lib/clsx";
 import { formatPkr } from "@/lib/format";
-import { visas, visaFaqs, visaTypes } from "@/data/visas";
+import { visaFaqs, visaTypes } from "@/data/visas";
+import { getVisas } from "@/lib/data/visas";
 import { site } from "@/data/site";
 
 export const metadata: Metadata = {
@@ -23,7 +24,9 @@ const steps = [
   { icon: "verified_user", title: "Visa Issued", desc: "Approved e-visa delivered, typically within 7 days." },
 ];
 
-export default function VisasPage() {
+export default async function VisasPage() {
+  const visas = await getVisas();
+
   return (
     <>
       <PageHeader
