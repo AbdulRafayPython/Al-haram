@@ -5,22 +5,42 @@ import { Icon } from "@/components/ui/Icon";
 import { PackageCard } from "@/components/packages/PackageCard";
 import { DepartureCalendar } from "@/components/packages/DepartureCalendar";
 import { clsx } from "@/lib/clsx";
-import { formatDate, formatPkr } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { departureCities, airlines } from "@/data/packages";
 import type { UmrahPackage } from "@/data/types";
 
 /**
- * Sentinel used by the "Select All" choices in the Airline and Package
- * dropdowns. Picking it widens the filter to every option in that step.
+ * Sentinel used by the "Select All" choices in the Airline / Package dropdowns.
+ * Picking it widens the filter to every option in that step.
  */
 const ALL = "__all__";
 
 /**
- * Progressive package finder. The filters cascade in a fixed order —
- * City → Airline → Package → Date — and each step stays locked until the
- * previous one is chosen, only ever offering options that still have
- * available packages given the earlier picks. Airline and Package each also
- * offer a "Select All" choice that opens the step up to every option at once.
+ * Per-date price numbering. Within each departure date, the cheapest package
+ * (by its "from" price) becomes Package 1, the next Package 2, and so on.
+ */
+function buildNumbering(packages: UmrahPackage[]): Map<string, number> {
+  const byDate = new Map<string, UmrahPackage[]>();
+  for (const p of packages) {
+    const arr = byDate.get(p.departureDate) ?? [];
+    arr.push(p);
+    byDate.set(p.departureDate, arr);
+  }
+  const map = new Map<string, number>();
+  for (const arr of byDate.values()) {
+    arr
+      .slice()
+      .sort((a, b) => a.pricePkr - b.pricePkr || a.id.localeCompare(b.id))
+      .forEach((p, i) => map.set(p.id, i + 1));
+  }
+  return map;
+}
+
+/**
+ * Progressive package finder. The filters cascade — City → Airline → Package →
+ * Date — each staying locked until the previous is chosen, only ever offering
+ * options that still have available packages. The Package step lists each
+ * departure by its duration (days).
  */
 export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
   // Sold-out departures are never shown.
@@ -38,6 +58,8 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
   const resultsRef = useRef<HTMLDivElement>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
 
+  const matchesAirline = (p: UmrahPackage) => airline === ALL || p.airline === airline;
+
   // --- Cascading option lists (each narrows the next) --------------------
   const cityOptions = useMemo(() => {
     const codes = new Set(availablePackages.map((p) => p.departureCityCode));
@@ -47,15 +69,10 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
   const airlineOptions = useMemo(() => {
     if (!city) return [];
     const set = new Set(
-      availablePackages
-        .filter((p) => p.departureCityCode === city)
-        .map((p) => p.airline),
+      availablePackages.filter((p) => p.departureCityCode === city).map((p) => p.airline),
     );
     return airlines.filter((a) => set.has(a));
   }, [availablePackages, city]);
-
-  // `airline === ALL` keeps every carrier operating from the chosen city.
-  const matchesAirline = (p: UmrahPackage) => airline === ALL || p.airline === airline;
 
   const packageOptions = useMemo(() => {
     if (!city || !airline) return [];
@@ -65,31 +82,29 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [availablePackages, city, airline]);
 
-  // The calendar shows the whole route's upcoming departures (city + airline,
-  // or city + every airline when "All Airlines" is picked), so multiple months
-  // appear whenever the route flies in more than one month. Months with no
-  // available seats simply never get built, so they stay hidden.
+  // The calendar shows the whole route's upcoming departures (city + airline).
   const routePackages = useMemo(
     () =>
       city && airline
-        ? availablePackages.filter(
-            (p) => p.departureCityCode === city && matchesAirline(p),
-          )
+        ? availablePackages.filter((p) => p.departureCityCode === city && matchesAirline(p))
         : [],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [availablePackages, city, airline],
   );
 
+  // Numbering is per departure date across the current route set.
+  const numbering = useMemo(() => buildNumbering(routePackages), [routePackages]);
+
   const results = useMemo(() => {
     if (!city || !airline || !selectedDate) return [];
-    return availablePackages.filter(
-      (p) =>
-        p.departureCityCode === city &&
-        matchesAirline(p) &&
-        p.departureDate === selectedDate,
-    );
+    return availablePackages
+      .filter(
+        (p) =>
+          p.departureCityCode === city && matchesAirline(p) && p.departureDate === selectedDate,
+      )
+      .sort((a, b) => (numbering.get(a.id) ?? 0) - (numbering.get(b.id) ?? 0));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [availablePackages, city, airline, selectedDate]);
+  }, [availablePackages, city, airline, selectedDate, numbering]);
 
   // --- Cascading resets: changing a step clears everything downstream ----
   const onCityChange = (v: string) => {
@@ -106,11 +121,9 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
   const onPackageChange = (v: string) => {
     setPackageId(v);
     if (v === ALL) {
-      // "All Packages" just reveals the calendar; let the user pick any date.
       setSelectedDate(null);
       return;
     }
-    // Jump the calendar straight to the chosen package's departure date.
     const pkg = availablePackages.find((p) => p.id === v);
     setSelectedDate(pkg ? pkg.departureDate : null);
   };
@@ -120,8 +133,6 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
       return;
     }
     setSelectedDate(date);
-    // Keep the Package dropdown in sync with the departure the user tapped,
-    // unless they're browsing "All Packages" — then leave the choice as-is.
     if (packageId !== ALL) {
       const pkg = routePackages.find((p) => p.departureDate === date);
       if (pkg) setPackageId(pkg.id);
@@ -134,10 +145,6 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
     setSelectedDate(null);
   };
 
-  // When the package step is chosen the calendar unfolds — on small screens it
-  // opens below the fold. Scroll it into view so "Choose a Departure Date" and
-  // the calendar aren't cut off. Only runs while no date is picked yet; once a
-  // date is chosen the results-scroll effect below takes over.
   useEffect(() => {
     if (!packageId || selectedDate || !calendarRef.current) return;
     const reduceMotion =
@@ -149,9 +156,6 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
     });
   }, [packageId, selectedDate]);
 
-  // Once the filters resolve to a set of packages, bring the results section
-  // into view. Keyed on the selected date so every applied date scrolls, even
-  // when consecutive picks happen to return the same number of packages.
   useEffect(() => {
     if (!results.length || !resultsRef.current) return;
     const reduceMotion =
@@ -159,22 +163,16 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const behavior: ScrollBehavior = reduceMotion ? "auto" : "smooth";
 
-    // Defer to the next frame so the freshly-rendered card is measured, then
-    // scroll enough to reveal the *whole* card — including the bottom "Included
-    // services" strip — instead of just aligning its top (which, on a card this
-    // tall, left the last row below the fold).
     const raf = requestAnimationFrame(() => {
       const el = resultsRef.current;
       if (!el) return;
-      const navOffset = 80; // clear the sticky navbar
-      const bottomGap = 24; // breathing room beneath the card
+      const navOffset = 80;
+      const bottomGap = 24;
       const rect = el.getBoundingClientRect();
       const vh = window.innerHeight;
       const absTop = window.scrollY + rect.top;
       const fits = rect.height <= vh - navOffset - bottomGap;
-      const target = fits
-        ? absTop - navOffset // whole card fits: align its top under the navbar
-        : absTop + rect.height - vh + bottomGap; // taller than viewport: show the bottom
+      const target = fits ? absTop - navOffset : absTop + rect.height - vh + bottomGap;
       window.scrollTo({ top: Math.max(0, target), behavior });
     });
 
@@ -212,12 +210,7 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
           </Field>
 
           <Field label="2 · Airline" muted={!city}>
-            <Select
-              value={airline}
-              onChange={onAirlineChange}
-              placeholder="Select Airline"
-              disabled={!city}
-            >
+            <Select value={airline} onChange={onAirlineChange} placeholder="Select Airline" disabled={!city}>
               {airlineOptions.length > 1 && <option value={ALL}>All Airlines</option>}
               {airlineOptions.map((a) => (
                 <option key={a} value={a}>
@@ -228,16 +221,11 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
           </Field>
 
           <Field label="3 · Package" muted={!airline}>
-            <Select
-              value={packageId}
-              onChange={onPackageChange}
-              placeholder="Select Package"
-              disabled={!airline}
-            >
+            <Select value={packageId} onChange={onPackageChange} placeholder="Select Package" disabled={!airline}>
               {packageOptions.length > 1 && <option value={ALL}>All Packages</option>}
               {packageOptions.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.title} · {formatPkr(p.pricePkr)}
+                  {p.durationDays} Days · {formatDate(p.departureDate)}
                 </option>
               ))}
             </Select>
@@ -255,19 +243,16 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
           </div>
         )}
 
-        {/* Step 4 — calendar appears only after a package is chosen */}
+        {/* Calendar appears once a package is chosen */}
         {packageId && (
-          <div
-            ref={calendarRef}
-            className="mt-5 scroll-mt-24 border-t border-outline-variant/40 pt-5"
-          >
+          <div ref={calendarRef} className="mt-5 scroll-mt-24 border-t border-outline-variant/40 pt-5">
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div>
                 <h3 className="font-[var(--font-heading)] text-lg text-on-surface md:text-xl">
                   4 · Choose a Departure Date
                 </h3>
                 <p className="mt-1 text-sm text-on-surface-variant">
-                  Tap the highlighted day to see your package details below.
+                  Tap the highlighted day to see your package details below. Later months appear beneath.
                 </p>
               </div>
               <span className="inline-flex items-center gap-1.5 text-xs text-on-surface-variant">
@@ -308,16 +293,14 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
               )}
             >
               {results.map((pkg) => (
-                <PackageCard key={pkg.id} pkg={pkg} />
+                <PackageCard key={pkg.id} pkg={pkg} packageNumber={numbering.get(pkg.id)} />
               ))}
             </div>
           </>
         ) : (
           <div className="flex flex-col items-center rounded-xl border border-dashed border-outline-variant bg-surface-container-low p-14 text-center">
             <Icon name="filter_list" className="text-5xl text-on-surface-variant/70" />
-            <p className="mt-4 font-[var(--font-heading)] text-lg text-on-surface">
-              {stepHint}
-            </p>
+            <p className="mt-4 font-[var(--font-heading)] text-lg text-on-surface">{stepHint}</p>
             <p className="mt-1 text-sm text-on-surface-variant">
               Follow the steps above to find your ideal Umrah package.
             </p>

@@ -1,14 +1,14 @@
 import type { ComponentType } from "react";
 import { SeatBadge } from "@/components/ui/SeatBadge";
 import { BlendImage } from "@/components/ui/BlendImage";
+import { BookNow } from "@/components/packages/BookNow";
 import { clsx } from "@/lib/clsx";
 import { formatPkr, formatDate } from "@/lib/format";
-import { site } from "@/data/site";
+import { formatClock } from "@/lib/flight";
 import { includedServices } from "@/data/packages";
-import type { UmrahPackage } from "@/data/types";
+import { ROOM_TYPES, type RoomType, type UmrahPackage } from "@/data/types";
 import {
   AccommodationIcon,
-  ArrowRightIcon,
   CalendarIcon,
   MapPinIcon,
   MoonIcon,
@@ -18,7 +18,6 @@ import {
   SeatIcon,
   ShieldCheckIcon,
   StarIcon,
-  SupportIcon,
   TicketIcon,
   TransportIcon,
   VisaIcon,
@@ -31,8 +30,25 @@ const SERVICE_ICONS: Record<string, SvgIcon> = {
   Transport: TransportIcon,
   Visa: VisaIcon,
   "Return Ticket": ReturnTicketIcon,
-  "Premium Support": SupportIcon,
 };
+
+/**
+ * Airline name → logo file. Empty until the real logos are uploaded to
+ * /public/logo/airlines/*. Unmapped airlines get a clean initials fallback,
+ * so the card never shows a broken image.
+ */
+const AIRLINE_LOGOS: Record<string, string> = {
+  // "Saudia": "/logo/airlines/saudia.png",
+};
+
+function airlineInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 3)
+    .toUpperCase();
+}
 
 /** "11 Aug" — day + short month, no year. */
 function dayMonth(iso: string): string {
@@ -46,16 +62,14 @@ function mapsHref(hotel: string, city: string): string {
 }
 
 /**
- * Full-width "dashboard" package card. Laid out horizontally — flight itinerary
- * and hotels on the left, the price table + CTA in a right rail, and included
- * services along the bottom — so the whole card fits one screen on desktop
- * without any scrolling, while carrying every detail.
+ * Full-width "dashboard" package card. Left: the flight card (departure/return
+ * times over flight numbers, airline + logo in the middle, route below) with the
+ * paired price grid underneath. Right: the hotels. A bottom band carries the
+ * included services and the BOOK NOW action.
  */
-export function PackageCard({ pkg }: { pkg: UmrahPackage }) {
+export function PackageCard({ pkg, packageNumber }: { pkg: UmrahPackage; packageNumber?: number }) {
   const soldOut = pkg.seatsAvailable === 0;
 
-  // Enriched fields are optional on the type; fall back so the card is robust
-  // even if a package is ever added without them.
   const makkahNights = pkg.makkahNights ?? Math.round(pkg.durationDays * 0.6);
   const madinahNights = pkg.madinahNights ?? pkg.durationDays - makkahNights;
   const returnDate = pkg.returnDate ?? pkg.departureDate;
@@ -64,17 +78,22 @@ export function PackageCard({ pkg }: { pkg: UmrahPackage }) {
     quad: pkg.pricePkr,
     triple: pkg.pricePkr,
     double: pkg.pricePkr,
-    infant: 75000,
+    infant: 0,
   };
   const flight = pkg.flight;
 
-  const tiers = [
-    { label: "Sharing", amount: pricing.sharing, best: true },
-    { label: "Quad", amount: pricing.quad, best: false },
-    { label: "Triple", amount: pricing.triple, best: false },
-    { label: "Double", amount: pricing.double, best: false },
-    { label: "Infant", amount: pricing.infant, best: false },
-  ];
+  const amountFor: Record<RoomType, number> = {
+    Sharing: pricing.sharing,
+    Quad: pricing.quad,
+    Triple: pricing.triple,
+    Double: pricing.double,
+  };
+  // Show only the room types this package offers (fall back to all four if legacy).
+  const offered = pkg.roomTypes.length ? pkg.roomTypes : ROOM_TYPES;
+  const tiers = offered.map((r) => ({ label: r, amount: amountFor[r] }));
+  const cheapest = tiers.length ? Math.min(...tiers.map((t) => t.amount)) : pkg.pricePkr;
+
+  const heading = packageNumber ? `Package ${packageNumber}` : pkg.title;
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl border border-outline-variant/40 bg-surface-container-lowest shadow-sm transition-all hover:shadow-xl">
@@ -83,12 +102,20 @@ export function PackageCard({ pkg }: { pkg: UmrahPackage }) {
         <BlendImage src="/images/kaaba.jpg" variant="card" position="object-center" />
         <div className="relative z-10 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-widest text-secondary-fixed">
-              {pkg.airline}
-            </p>
-            <h3 className="mt-0.5 font-[var(--font-heading)] text-xl leading-tight text-on-primary">
-              {pkg.title}
+            <h3 className="font-[var(--font-heading)] text-xl leading-tight text-on-primary">
+              {heading}
             </h3>
+            {(pkg.groupCode || pkg.packageCode) && (
+              <p className="mt-0.5 text-xs font-medium text-on-primary/70">
+                {pkg.groupCode && (
+                  <>
+                    Group <span className="text-secondary-fixed">{pkg.groupCode}</span>
+                  </>
+                )}
+                {pkg.groupCode && pkg.packageCode && " · "}
+                {pkg.packageCode && <>Code {pkg.packageCode}</>}
+              </p>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
@@ -114,179 +141,180 @@ export function PackageCard({ pkg }: { pkg: UmrahPackage }) {
         </div>
       </div>
 
-      {/* Body: main (flight + hotels) | rail (pricing + CTA) -------------- */}
-      <div className="grid gap-4 p-5 lg:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
-        {/* Main column */}
+      {/* Body: flight + price (left) | hotels (right) --------------------- */}
+      <div className="grid gap-4 p-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        {/* Left column: flight card + price */}
         <div className="flex flex-col gap-4">
-          {/* Flight itinerary */}
-          {flight && (
-            <section className="rounded-lg border border-outline-variant/40 bg-surface-container-low p-4">
-              <div className="grid items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
-                <FlightLeg
-                  Icon={PlaneTakeoffIcon}
-                  flightNo={flight.outboundNo}
-                  date={pkg.departureDate}
-                  time={flight.outboundTime}
-                  bigTime={flight.departureTime}
-                  bigLabel="Departure"
-                />
-                <ArrowRightIcon className="mx-auto h-5 w-5 rotate-90 text-on-surface-variant/60 sm:rotate-0" />
-                <FlightLeg
-                  Icon={PlaneLandingIcon}
-                  flightNo={flight.inboundNo}
-                  date={returnDate}
-                  time={flight.inboundTime}
-                  bigTime={flight.arrivalTime}
-                  bigLabel="Arrival"
-                  alignEnd
-                />
-              </div>
-              <div className="mt-3 flex items-center justify-between border-t border-outline-variant/30 pt-3 text-xs">
-                <span className="inline-flex items-center gap-1.5 font-medium text-on-surface">
-                  <PlaneTakeoffIcon className="h-3.5 w-3.5 text-secondary" />
-                  {flight.route}
-                </span>
-                <span className="inline-flex items-center gap-1.5 text-on-surface-variant">
-                  <MoonIcon className="h-3.5 w-3.5 text-secondary" />
-                  {pkg.durationDays} nights duration
-                </span>
-              </div>
-            </section>
-          )}
+          {/* Flight card */}
+          <section className="rounded-lg border border-outline-variant/40 bg-surface-container-low p-4">
+            {flight ? (
+              <>
+                <div className="grid items-center gap-2 sm:grid-cols-[1fr_auto_1fr]">
+                  {/* Departure + connector line to the plane */}
+                  <div className="flex items-center gap-2">
+                    <FlightLeg
+                      Icon={PlaneTakeoffIcon}
+                      label="Departure"
+                      bigTime={formatClock(flight.departureTime) || "—"}
+                      flightNo={flight.outboundNo}
+                      date={pkg.departureDate}
+                      checkIn={flight.outboundTime}
+                    />
+                    <span className="hidden h-px flex-1 border-t border-dashed border-outline-variant/70 sm:block" />
+                  </div>
 
-          {/* Hotels */}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <HotelBlock
-              city="Makkah"
-              label="Makkah Hotel"
-              name={pkg.makkahHotel}
-              nights={makkahNights}
-              location={pkg.makkahLocation}
-            />
-            <HotelBlock
-              city="Madinah"
-              label="Madinah Hotel"
-              name={pkg.madinahHotel}
-              nights={madinahNights}
-              location={pkg.madinahLocation}
-            />
-          </div>
+                  {/* Center: airline above, plane in the middle, route below */}
+                  <div className="flex flex-col items-center gap-1.5 px-1 text-center">
+                    <div className="flex items-center gap-2">
+                      <AirlineLogo name={pkg.airline} />
+                      <span className="font-[var(--font-heading)] text-sm font-semibold text-on-surface">
+                        {pkg.airline}
+                      </span>
+                    </div>
+                    <PlaneTakeoffIcon className="h-5 w-5 text-secondary" />
+                    <span className="whitespace-nowrap text-xs font-medium text-on-surface-variant">
+                      {flight.route}
+                    </span>
+                  </div>
 
-          {/* Booking codes + seats */}
-          <div className="mt-auto flex flex-wrap items-center justify-between gap-3 rounded-lg border border-outline-variant/30 bg-surface-container-low px-4 py-2.5">
-            <div className="flex items-center gap-2 text-xs">
-              <TicketIcon className="h-4 w-4 shrink-0 text-secondary" />
-              <div className="flex flex-wrap gap-x-4 gap-y-0.5 leading-tight">
-                {pkg.packageCode && (
-                  <span className="text-on-surface-variant">
-                    Package{" "}
-                    <span className="font-semibold text-on-surface">{pkg.packageCode}</span>
+                  {/* Connector line from the plane to Arrival */}
+                  <div className="flex items-center gap-2">
+                    <span className="hidden h-px flex-1 border-t border-dashed border-outline-variant/70 sm:block" />
+                    <FlightLeg
+                      Icon={PlaneLandingIcon}
+                      label="Arrival"
+                      bigTime={formatClock(flight.arrivalTime) || "—"}
+                      flightNo={flight.inboundNo}
+                      date={returnDate}
+                      checkIn={flight.inboundTime}
+                      alignEnd
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center gap-2.5 py-2 text-center">
+                <div className="flex items-center gap-2.5">
+                  <AirlineLogo name={pkg.airline} />
+                  <span className="font-[var(--font-heading)] text-sm font-semibold text-on-surface">
+                    {pkg.airline}
                   </span>
-                )}
-                {pkg.groupCode && (
-                  <span className="text-on-surface-variant">
-                    Group <span className="font-semibold text-on-surface">{pkg.groupCode}</span>
-                  </span>
-                )}
+                </div>
+                <p className="text-xs text-on-surface-variant">Flight details to be confirmed</p>
               </div>
+            )}
+          </section>
+
+          {/* Price section (below the flight card) — paired grid */}
+          <section className="rounded-lg border border-outline-variant/40 bg-surface-container-low p-4">
+            <p className="mb-2.5 text-[0.7rem] font-semibold uppercase tracking-wider text-on-surface-variant">
+              Price per person (PKR)
+            </p>
+            <div className="grid grid-cols-1 gap-2.5 min-[400px]:grid-cols-2">
+              {tiers.map((t) => {
+                const best = t.amount === cheapest;
+                return (
+                  <div
+                    key={t.label}
+                    className={clsx(
+                      "flex items-center justify-between gap-2 rounded-lg border px-3 py-2",
+                      best
+                        ? "border-secondary/50 bg-secondary-container/30"
+                        : "border-outline-variant/40 bg-surface-container",
+                    )}
+                  >
+                    <span className="flex min-w-0 items-center gap-1.5 text-sm text-on-surface-variant">
+                      {best && <StarIcon className="h-3.5 w-3.5 shrink-0 text-secondary" />}
+                      <span className="truncate">{t.label}</span>
+                    </span>
+                    <span
+                      className={clsx(
+                        "shrink-0 whitespace-nowrap font-[var(--font-heading)] tabular-nums",
+                        best ? "text-sm font-semibold text-secondary" : "text-sm text-on-surface",
+                      )}
+                    >
+                      {formatPkr(t.amount)}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
+            {pricing.infant > 0 && (
+              <p className="mt-2.5 text-xs text-on-surface-variant">
+                Infant: <span className="font-medium text-on-surface">{formatPkr(pricing.infant)}</span>
+              </p>
+            )}
+          </section>
+
+          {/* Included services — fills the left column under the price panel */}
+          <div className="mt-auto rounded-lg border border-outline-variant/30 bg-surface-container-low/40 px-3.5 py-3">
+            <span className="text-[0.7rem] font-semibold uppercase tracking-wider text-on-surface-variant">
+              Included
+            </span>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
+              {includedServices.map((svc) => {
+                const Ic = SERVICE_ICONS[svc];
+                return (
+                  <span key={svc} className="inline-flex items-center gap-1.5 text-sm text-on-surface">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-md bg-secondary-container/60 text-secondary">
+                      {Ic && <Ic className="h-3.5 w-3.5" />}
+                    </span>
+                    {svc}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Right column: hotels + codes/seats */}
+        <div className="flex flex-col gap-3 lg:border-l lg:border-outline-variant/40 lg:pl-4">
+          <HotelBlock
+            city="Makkah"
+            label="Makkah Hotel"
+            name={pkg.makkahHotel}
+            nights={makkahNights}
+            location={pkg.makkahLocation}
+          />
+          <HotelBlock
+            city="Madinah"
+            label="Madinah Hotel"
+            name={pkg.madinahHotel}
+            nights={madinahNights}
+            location={pkg.madinahLocation}
+          />
+
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-outline-variant/30 bg-surface-container-low px-3.5 py-2.5 text-xs">
+            <span className="inline-flex items-center gap-1.5 text-on-surface-variant">
+              <TicketIcon className="h-4 w-4 text-secondary" />
+              {pkg.packageCode ? (
+                <span className="font-semibold text-on-surface">{pkg.packageCode}</span>
+              ) : (
+                "—"
+              )}
+            </span>
             <span className="inline-flex items-center gap-1.5">
               <SeatIcon className="h-4 w-4 text-secondary" />
               <SeatBadge available={pkg.seatsAvailable} total={pkg.seatsTotal} />
             </span>
           </div>
-        </div>
-
-        {/* Price rail */}
-        <div className="flex flex-col gap-3 lg:border-l lg:border-outline-variant/40 lg:pl-4">
-          <section className="rounded-lg border border-outline-variant/40 bg-surface-container-low p-4">
-            <p className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wider text-on-surface-variant">
-              Price per person (PKR)
-            </p>
-            <div>
-              {tiers.map((t) => (
-                <div
-                  key={t.label}
-                  className="flex items-center justify-between border-b border-outline-variant/25 py-1.5 last:border-0"
-                >
-                  <span className="flex items-center gap-2">
-                    {t.best && <StarIcon className="h-3.5 w-3.5 text-secondary" />}
-                    <span
-                      className={clsx(
-                        "text-sm",
-                        t.best ? "font-semibold text-on-surface" : "text-on-surface-variant",
-                      )}
-                    >
-                      {t.label}
-                    </span>
-                    {t.best && (
-                      <span className="rounded-full bg-secondary-container px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider text-on-secondary-container">
-                        Best value
-                      </span>
-                    )}
-                  </span>
-                  <span
-                    className={clsx(
-                      "font-[var(--font-heading)] tabular-nums",
-                      t.best ? "text-base text-secondary" : "text-sm text-on-surface",
-                    )}
-                  >
-                    {formatPkr(t.amount)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* CTA */}
-          <div className="mt-auto flex items-end justify-between gap-3">
-            <div>
-              <p className="text-[0.7rem] uppercase tracking-wider text-on-surface-variant">
-                From / person
-              </p>
-              <p className="font-[var(--font-heading)] text-xl text-on-surface">
-                {formatPkr(pricing.sharing)}
-              </p>
-            </div>
-            <a
-              href={
-                soldOut
-                  ? site.whatsappHref
-                  : `${site.whatsappHref}?text=${encodeURIComponent(`I'm interested in ${pkg.title} (${pkg.packageCode ?? pkg.id})`)}`
-              }
-              target="_blank"
-              rel="noopener noreferrer"
-              className={clsx(
-                "inline-flex items-center gap-1.5 rounded-lg px-5 py-2.5 text-xs font-semibold uppercase tracking-widest transition-all",
-                soldOut
-                  ? "border border-outline-variant text-on-surface-variant hover:bg-surface-container"
-                  : "bg-secondary-fixed text-on-secondary-fixed hover:brightness-105",
-              )}
-            >
-              {soldOut ? "Join Waitlist" : "Enquire"}
-              <ArrowRightIcon className="h-4 w-4" />
-            </a>
+          {/* Book now (pinned to the bottom of the right column) */}
+          <div className="mt-auto pt-1">
+            <BookNow
+              soldOut={soldOut}
+              fullWidth
+              booking={{
+                packageId: pkg.id,
+                heading,
+                airline: pkg.airline,
+                departureDate: pkg.departureDate,
+                fromPrice: cheapest,
+                roomTypes: offered,
+                prices: amountFor,
+                infantPrice: pricing.infant,
+              }}
+            />
           </div>
-        </div>
-      </div>
-
-      {/* Included services (full-width footer) ---------------------------- */}
-      <div className="border-t border-outline-variant/40 bg-surface-container-low/40 px-5 py-3">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2.5">
-          <span className="text-[0.7rem] font-semibold uppercase tracking-wider text-on-surface-variant">
-            Included
-          </span>
-          {includedServices.map((svc) => {
-            const Ic = SERVICE_ICONS[svc];
-            return (
-              <span key={svc} className="inline-flex items-center gap-2 text-sm text-on-surface">
-                <span className="flex h-7 w-7 items-center justify-center rounded-md bg-secondary-container/60 text-secondary">
-                  {Ic && <Ic className="h-4 w-4" />}
-                </span>
-                {svc}
-              </span>
-            );
-          })}
         </div>
       </div>
     </article>
@@ -295,37 +323,55 @@ export function PackageCard({ pkg }: { pkg: UmrahPackage }) {
 
 // --- Subcomponents ----------------------------------------------------------
 
+function AirlineLogo({ name }: { name: string }) {
+  const src = AIRLINE_LOGOS[name];
+  if (src) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt={name} className="h-8 w-8 rounded-md bg-white/90 object-contain p-0.5" />;
+  }
+  return (
+    <span className="flex h-8 min-w-8 items-center justify-center rounded-md bg-secondary-container px-1.5 text-[0.7rem] font-bold tracking-wide text-on-secondary-container">
+      {airlineInitials(name)}
+    </span>
+  );
+}
+
 function FlightLeg({
   Icon,
+  label,
+  bigTime,
   flightNo,
   date,
-  time,
-  bigTime,
-  bigLabel,
+  checkIn,
   alignEnd,
 }: {
   Icon: SvgIcon;
+  label: string;
+  bigTime: string;
   flightNo: string;
   date: string;
-  time: string;
-  bigTime: string;
-  bigLabel: string;
+  checkIn?: string;
   alignEnd?: boolean;
 }) {
   return (
     <div className={clsx(alignEnd && "sm:text-right")}>
-      <div className={clsx("flex items-center gap-2", alignEnd && "sm:flex-row-reverse")}>
+      <div className={clsx("flex items-center gap-1.5", alignEnd && "sm:flex-row-reverse")}>
         <Icon className="h-4 w-4 shrink-0 text-secondary" />
-        <span className="text-sm font-semibold text-on-surface">{flightNo}</span>
+        <span className="text-[0.6rem] font-semibold uppercase tracking-wider text-secondary">
+          {label}
+        </span>
       </div>
-      <p className="mt-1 text-xs text-on-surface-variant">
-        {formatDate(date)} · {time}
-      </p>
-      <p className="mt-2 font-[var(--font-heading)] text-base leading-none text-on-surface">
+      {/* Departure/arrival time on top */}
+      <p className="mt-1.5 font-[var(--font-heading)] text-lg leading-none text-on-surface">
         {bigTime}
       </p>
-      <p className="mt-1 text-[0.6rem] font-semibold uppercase tracking-wider text-secondary">
-        {bigLabel}
+      {/* Flight number below the time */}
+      {flightNo && (
+        <p className="mt-1 text-sm font-semibold text-on-surface">Flight {flightNo}</p>
+      )}
+      <p className="mt-1 text-xs text-on-surface-variant">
+        {formatDate(date)}
+        {checkIn && formatClock(checkIn) ? ` · check-in ${formatClock(checkIn)}` : ""}
       </p>
     </div>
   );
@@ -347,9 +393,7 @@ function HotelBlock({
   return (
     <div className="flex flex-col rounded-lg border border-outline-variant/30 bg-primary-container/40 p-3.5">
       <div className="flex items-center justify-between">
-        <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-secondary">
-          {label}
-        </p>
+        <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-secondary">{label}</p>
         <span className="inline-flex items-center gap-1 text-[0.7rem] font-medium text-on-surface-variant">
           <MoonIcon className="h-3 w-3" />
           {nights} nights

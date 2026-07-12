@@ -1,41 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Icon } from "@/components/ui/Icon";
+import { useMemo, useState } from "react";
 import { clsx } from "@/lib/clsx";
 import type { UmrahPackage } from "@/data/types";
 
-/** How many months the largest layout shows side by side at once. */
-const MAX_VISIBLE = 3;
-
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const SHORT_MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
 ];
 
 interface DayInfo {
@@ -47,6 +22,8 @@ interface MonthCell {
   year: number;
   /** 0-indexed month */
   month: number;
+  key: string; // "YYYY-MM"
+  seats: number;
 }
 
 /** Build a stable `YYYY-MM-DD` key from calendar parts (matches package.departureDate). */
@@ -62,14 +39,12 @@ interface DepartureCalendarProps {
 }
 
 /**
- * A multi-month departure board. Each day that has a departure shows its live
- * seat count and is clickable; selecting one filters the package list below.
+ * A multi-month departure board. Every month with a departure is rendered in a
+ * wrapping grid — three per row on desktop, then flowing onto the next row —
+ * so later months appear *below*, never behind a horizontal swipe. A month
+ * filter jumps to a single month's availability.
  */
-export function DepartureCalendar({
-  packages,
-  selectedDate,
-  onSelect,
-}: DepartureCalendarProps) {
+export function DepartureCalendar({ packages, selectedDate, onSelect }: DepartureCalendarProps) {
   const { months, byDate } = useMemo(() => {
     const byDate = new Map<string, DayInfo>();
     for (const p of packages) {
@@ -80,108 +55,57 @@ export function DepartureCalendar({
     }
 
     const monthMap = new Map<string, MonthCell>();
-    for (const key of byDate.keys()) {
-      const [y, m] = key.split("-").map(Number);
-      monthMap.set(`${y}-${m}`, { year: y, month: m - 1 });
+    for (const [dateStr, info] of byDate) {
+      const [y, m] = dateStr.split("-").map(Number);
+      const key = `${y}-${String(m).padStart(2, "0")}`;
+      const existing = monthMap.get(key);
+      if (existing) existing.seats += info.seats;
+      else monthMap.set(key, { year: y, month: m - 1, key, seats: info.seats });
     }
-    const months = [...monthMap.values()].sort(
-      (a, b) => a.year - b.year || a.month - b.month,
-    );
+    const months = [...monthMap.values()].sort((a, b) => a.year - b.year || a.month - b.month);
 
     return { months, byDate };
   }, [packages]);
 
-  // How many months fit side by side: 1 on phones, 2 on tablets, up to 3 on
-  // desktop. Starts at the desktop default and self-corrects after mount.
-  const [visible, setVisible] = useState(MAX_VISIBLE);
-  useEffect(() => {
-    const mqLg = window.matchMedia("(min-width: 1024px)");
-    const mqSm = window.matchMedia("(min-width: 640px)");
-    const update = () => setVisible(mqLg.matches ? 3 : mqSm.matches ? 2 : 1);
-    update();
-    mqLg.addEventListener("change", update);
-    mqSm.addEventListener("change", update);
-    return () => {
-      mqLg.removeEventListener("change", update);
-      mqSm.removeEventListener("change", update);
-    };
-  }, []);
-
-  // Sliding window over the months. Paging by one keeps navigation smooth and
-  // avoids stranding a lone month on its own page. `windowStart` is driven by
-  // the arrows; `prevSelected`/`prevVisible` let us reconcile it during render.
-  // (A route change unmounts the calendar entirely, so no reset is needed.)
-  const [windowStart, setWindowStart] = useState(0);
-  const [prevSelected, setPrevSelected] = useState<string | null>(null);
-  const [prevVisible, setPrevVisible] = useState(visible);
+  const [monthFilter, setMonthFilter] = useState<string | null>(null);
 
   if (months.length === 0) return null;
 
-  const maxStart = Math.max(0, months.length - visible);
-
-  // Adjust the window while rendering (React's supported alternative to an
-  // effect) so the month holding the selected date stays on-screen — whether it
-  // was set via the Package dropdown or the visible column count just changed —
-  // while still honouring manual paging via the arrows.
-  let start = Math.min(windowStart, maxStart);
-  if ((selectedDate !== prevSelected || visible !== prevVisible) && selectedDate) {
-    const target = selectedDate.slice(0, 7); // YYYY-MM
-    const idx = months.findIndex(
-      (m) => `${m.year}-${String(m.month + 1).padStart(2, "0")}` === target,
-    );
-    if (idx !== -1) {
-      if (idx < start) start = Math.min(idx, maxStart);
-      else if (idx > start + visible - 1) start = Math.min(idx - visible + 1, maxStart);
-    }
-  }
-  if (selectedDate !== prevSelected) setPrevSelected(selectedDate);
-  if (visible !== prevVisible) setPrevVisible(visible);
-  if (start !== windowStart) setWindowStart(start);
-
-  const shown = months.slice(start, start + visible);
-  const canPrev = start > 0;
-  const canNext = start < maxStart;
-  const page = (dir: -1 | 1) =>
-    setWindowStart(Math.min(Math.max(start + dir, 0), maxStart));
-
-  const first = shown[0];
-  const last = shown[shown.length - 1];
-  const rangeLabel =
-    first === last
-      ? `${MONTH_NAMES[first.month]} ${first.year}`
-      : `${SHORT_MONTHS[first.month]} ${first.year} – ${SHORT_MONTHS[last.month]} ${last.year}`;
+  const selectedMonth = selectedDate ? selectedDate.slice(0, 7) : null;
+  // Show every month by default; when a month is filtered, still keep the month
+  // that holds the selected date visible so the chosen day is never hidden.
+  const displayedMonths = monthFilter
+    ? months.filter((m) => m.key === monthFilter || m.key === selectedMonth)
+    : months;
 
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <p className="text-sm font-medium text-on-surface">{rangeLabel}</p>
-        {months.length > visible && (
-          <div className="flex items-center gap-1.5">
-            <NavButton
-              icon="chevron_left"
-              label="Previous months"
-              disabled={!canPrev}
-              onClick={() => page(-1)}
-            />
-            <NavButton
-              icon="chevron_right"
-              label="Next months"
-              disabled={!canNext}
-              onClick={() => page(1)}
-            />
-          </div>
-        )}
-      </div>
+      {/* Month filter */}
+      {months.length > 1 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-[0.7rem] font-semibold uppercase tracking-wider text-on-surface-variant">
+            Month
+          </span>
+          <MonthChip active={monthFilter === null} onClick={() => setMonthFilter(null)}>
+            All
+          </MonthChip>
+          {months.map((m) => (
+            <MonthChip
+              key={m.key}
+              active={monthFilter === m.key}
+              onClick={() => setMonthFilter(m.key)}
+            >
+              {SHORT_MONTHS[m.month]} {m.year}
+              <span className="ml-1 text-[0.6rem] text-secondary">· {m.seats} seats</span>
+            </MonthChip>
+          ))}
+        </div>
+      )}
 
-      <div
-        className="grid gap-3"
-        style={{
-          gridTemplateColumns: `repeat(${Math.max(shown.length, 1)}, minmax(0, 1fr))`,
-        }}
-      >
-        {shown.map((mo) => (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {displayedMonths.map((mo) => (
           <MonthGrid
-            key={`${mo.year}-${mo.month}`}
+            key={mo.key}
             year={mo.year}
             month={mo.month}
             byDate={byDate}
@@ -194,32 +118,28 @@ export function DepartureCalendar({
   );
 }
 
-function NavButton({
-  icon,
-  label,
-  disabled,
+function MonthChip({
+  active,
   onClick,
+  children,
 }: {
-  icon: string;
-  label: string;
-  disabled: boolean;
+  active: boolean;
   onClick: () => void;
+  children: React.ReactNode;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={disabled}
-      aria-label={label}
       className={clsx(
-        "flex h-8 w-8 items-center justify-center rounded-full border border-outline-variant/60 text-on-surface transition-colors",
+        "inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary-fixed",
-        disabled
-          ? "cursor-not-allowed opacity-35"
-          : "hover:border-secondary hover:bg-secondary-container/50",
+        active
+          ? "border-secondary bg-secondary-container text-on-secondary-container"
+          : "border-outline-variant/60 text-on-surface-variant hover:border-secondary/50 hover:text-on-surface",
       )}
     >
-      <Icon name={icon} className="text-xl" />
+      {children}
     </button>
   );
 }

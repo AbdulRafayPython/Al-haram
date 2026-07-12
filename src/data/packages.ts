@@ -28,5 +28,4 @@ export const includedServices = [
   "Transport",
   "Visa",
   "Return Ticket",
-  "Premium Support",
 ] as const;

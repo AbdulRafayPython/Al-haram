@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getHotelOptions, getPackageRowById } from "@/lib/data/packages";
+import { getAirlines } from "@/lib/data/airlines";
+import { toTimeInputValue } from "@/lib/flight";
 import { PackageWizard } from "../../PackageWizard";
 import type { PackageFormInput } from "@/app/admin/actions";
 
@@ -15,12 +17,19 @@ export default async function EditPackagePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [hotelOptions, row] = await Promise.all([
+  const [hotelOptions, airlines, row] = await Promise.all([
     getHotelOptions(),
+    getAirlines(),
     getPackageRowById(id).catch(() => null),
   ]);
 
   if (!row) notFound();
+
+  const roomTypes = row.room_types?.length
+    ? row.room_types
+    : row.room_type
+      ? [row.room_type]
+      : [];
 
   const initialValues: PackageFormInput = {
     title: row.title,
@@ -33,7 +42,7 @@ export default async function EditPackagePage({
     madinahHotelId: row.madinah_hotel_id,
     makkahNights: row.makkah_nights,
     madinahNights: row.madinah_nights,
-    roomType: row.room_type,
+    roomTypes,
     priceSharing: row.price_sharing ?? row.price_pkr,
     priceQuad: row.price_quad,
     priceTriple: row.price_triple,
@@ -46,10 +55,11 @@ export default async function EditPackagePage({
     flightRoute: row.flight_route,
     flightOutboundNo: row.flight_outbound_no,
     flightInboundNo: row.flight_inbound_no,
-    flightOutboundTime: row.flight_outbound_time,
-    flightInboundTime: row.flight_inbound_time,
-    flightDepartureTime: row.flight_departure_time,
-    flightArrivalTime: row.flight_arrival_time,
+    // Legacy free-text times are normalized to "HH:MM" so the time pickers show them.
+    flightOutboundTime: toTimeInputValue(row.flight_outbound_time) || null,
+    flightInboundTime: toTimeInputValue(row.flight_inbound_time) || null,
+    flightDepartureTime: toTimeInputValue(row.flight_departure_time) || null,
+    flightArrivalTime: toTimeInputValue(row.flight_arrival_time) || null,
     featured: row.featured,
   };
 
@@ -60,6 +70,7 @@ export default async function EditPackagePage({
       <div className="mt-6">
         <PackageWizard
           hotelOptions={hotelOptions}
+          airlines={airlines}
           mode="edit"
           packageId={id}
           initialValues={initialValues}

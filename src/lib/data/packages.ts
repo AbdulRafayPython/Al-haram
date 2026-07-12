@@ -1,7 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/supabase/types";
-import type { UmrahPackage } from "@/data/types";
+import type { RoomType, UmrahPackage } from "@/data/types";
 
 type PackageRow = Tables<"packages"> & {
   makkah_hotel: Tables<"hotels"> | null;
@@ -28,7 +28,11 @@ function toUmrahPackage(row: PackageRow): UmrahPackage {
     departureDate: row.departure_date,
     makkahHotel: row.makkah_hotel?.name ?? "To be confirmed",
     madinahHotel: row.madinah_hotel?.name ?? "To be confirmed",
-    roomType: row.room_type as UmrahPackage["roomType"],
+    roomTypes: (row.room_types?.length
+      ? row.room_types
+      : row.room_type
+        ? [row.room_type]
+        : []) as RoomType[],
     pricePkr: row.price_pkr,
     seatsTotal: row.seats_total,
     seatsAvailable: row.seats_available,

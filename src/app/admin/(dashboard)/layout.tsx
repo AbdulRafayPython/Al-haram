@@ -8,6 +8,7 @@ const navItems = [
   { href: "/admin", icon: "dashboard", label: "Dashboard" },
   { href: "/admin/packages", icon: "flight_class", label: "Umrah Packages" },
   { href: "/admin/packages/new", icon: "add_circle", label: "Add Package" },
+  { href: "/admin/hotels", icon: "apartment", label: "Hotels" },
 ];
 
 export default function AdminDashboardLayout({
@@ -16,7 +17,7 @@ export default function AdminDashboardLayout({
   return (
     <div className="flex min-h-screen flex-col bg-background md:flex-row">
       {/* Sidebar */}
-      <aside className="flex shrink-0 flex-col justify-between border-b border-on-primary/10 bg-primary text-on-primary md:w-64 md:border-b-0 md:border-r">
+      <aside className="flex shrink-0 flex-col justify-between border-b border-white/10 bg-surface text-on-surface md:w-64 md:border-b-0 md:border-r">
         <div>
           <div className="flex items-center gap-2.5 px-6 py-5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -29,7 +30,7 @@ export default function AdminDashboardLayout({
             />
             <div className="leading-tight">
               <p className="text-sm font-bold">{site.shortName}</p>
-              <p className="text-[0.65rem] uppercase tracking-widest text-on-primary/60">Admin</p>
+              <p className="text-[0.65rem] uppercase tracking-widest text-on-surface-variant">Admin</p>
             </div>
           </div>
 
@@ -40,11 +41,11 @@ export default function AdminDashboardLayout({
           </nav>
         </div>
 
-        <div className="space-y-1 border-t border-on-primary/10 p-3">
+        <div className="space-y-1 border-t border-white/10 p-3">
           <Link
             href="/"
             target="_blank"
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-on-primary/70 transition-colors hover:bg-on-primary/10 hover:text-on-primary"
+            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-on-surface-variant transition-colors hover:bg-white/5 hover:text-on-surface"
           >
             <Icon name="open_in_new" className="text-lg" />
             View Live Site
@@ -52,7 +53,7 @@ export default function AdminDashboardLayout({
           <form action={logoutAdmin}>
             <button
               type="submit"
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-on-primary/70 transition-colors hover:bg-on-primary/10 hover:text-on-primary"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-on-surface-variant transition-colors hover:bg-white/5 hover:text-on-surface"
             >
               <Icon name="logout" className="text-lg" />
               Sign Out

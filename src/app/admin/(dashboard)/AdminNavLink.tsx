@@ -24,7 +24,7 @@ export function AdminNavLink({
         "flex shrink-0 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors md:shrink",
         isActive
           ? "bg-secondary-container text-on-secondary-container"
-          : "text-on-primary/70 hover:bg-on-primary/10 hover:text-on-primary",
+          : "text-on-surface-variant hover:bg-white/5 hover:text-on-surface",
       )}
     >
       <Icon name={icon} className="text-lg" />

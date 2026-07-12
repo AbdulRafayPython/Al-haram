@@ -100,7 +100,10 @@ function HotelCard({ hotel }: { hotel: Hotel }) {
       {/* Visual */}
       <div className="relative h-40 overflow-hidden bg-primary">
         <BlendImage
-          src={hotel.city === "Makkah" ? "/images/makkah-skyline.jpg" : "/images/madinah.jpg"}
+          src={
+            hotel.imageUrl ??
+            (hotel.city === "Makkah" ? "/images/makkah-skyline.jpg" : "/images/madinah.jpg")
+          }
           variant="photo"
           position="object-center"
         />

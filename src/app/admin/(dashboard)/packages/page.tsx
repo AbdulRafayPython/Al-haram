@@ -67,7 +67,9 @@ export default async function AdminPackagesPage() {
                     <td className="px-5 py-3.5 text-on-surface-variant">
                       {formatDate(p.departureDate)}
                     </td>
-                    <td className="px-5 py-3.5 text-on-surface-variant">{p.roomType}</td>
+                    <td className="px-5 py-3.5 text-on-surface-variant">
+                      {p.roomTypes.join(", ") || "—"}
+                    </td>
                     <td className="px-5 py-3.5 text-right text-on-surface">
                       {formatPkr(p.pricePkr)}
                     </td>

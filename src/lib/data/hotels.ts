@@ -22,7 +22,8 @@ export async function getHotels(): Promise<Hotel[]> {
       triple: h.rate_triple,
       quad: h.rate_quad,
     },
-    hasImage: h.has_image,
+    hasImage: h.has_image || Boolean(h.image_url),
+    imageUrl: h.image_url,
   }));
 }
 

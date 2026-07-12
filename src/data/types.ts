@@ -13,6 +13,11 @@ export interface FlightItinerary {
   arrivalTime: string; // lands back, e.g. "8:30 AM"
 }
 
+/** The room-occupancy tiers a package can offer. */
+export type RoomType = "Sharing" | "Quad" | "Triple" | "Double";
+
+export const ROOM_TYPES: RoomType[] = ["Sharing", "Quad", "Triple", "Double"];
+
 /** Per-person price by room occupancy (PKR). */
 export interface PriceTiers {
   sharing: number;
@@ -32,7 +37,8 @@ export interface UmrahPackage {
   departureDate: string; // ISO date
   makkahHotel: string;
   madinahHotel: string;
-  roomType: "Sharing" | "Quad" | "Triple" | "Double";
+  /** Room tiers this package offers (multi-select). Cheapest offered tier drives sort/"from" price. */
+  roomTypes: RoomType[];
   pricePkr: number;
   seatsTotal: number;
   seatsAvailable: number;
@@ -63,6 +69,7 @@ export interface Hotel {
     quad: number;
   };
   hasImage: boolean;
+  imageUrl: string | null; // uploaded via admin; falls back to a city image when null
 }
 
 export interface TransportRate {

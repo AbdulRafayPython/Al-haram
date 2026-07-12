@@ -4,28 +4,41 @@ import { useMemo, useState, useTransition } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { clsx } from "@/lib/clsx";
 import { formatPkr } from "@/lib/format";
-import { departureCities, airlines } from "@/data/packages";
-import { createPackageAction, updatePackageAction, type PackageFormInput } from "@/app/admin/actions";
+import { departureCities } from "@/data/packages";
+import { ROOM_TYPES, type RoomType } from "@/data/types";
+import { getFlightIssues } from "@/lib/flight";
+import {
+  createAirlineAction,
+  createPackageAction,
+  updatePackageAction,
+  type PackageFormInput,
+} from "@/app/admin/actions";
 import type { HotelOption } from "@/lib/data/packages";
 
 const steps = ["Route & Airline", "Hotels & Stay", "Flight Details", "Pricing & Seats", "Review"] as const;
-const roomTypes = ["Sharing", "Quad", "Triple", "Double"] as const;
 
-const emptyForm = (hotelOptions: HotelOption[]): PackageFormInput => {
+/** Auto-suggested package/group codes (module scope so the timestamp read isn't in render). */
+function autoCodes(existingGroup: string | null): { packageCode: string; groupCode: string } {
+  const serial = Date.now().toString().slice(-5);
+  return { packageCode: `UP-${serial}`, groupCode: existingGroup ?? `UG-${serial}` };
+}
+
+const emptyForm = (hotelOptions: HotelOption[], airlines: string[]): PackageFormInput => {
   const makkah = hotelOptions.find((h) => h.city === "Makkah");
   const madinah = hotelOptions.find((h) => h.city === "Madinah");
+  const code = departureCities[0].code;
   return {
     title: "",
-    airline: airlines[0],
-    departureCity: `${departureCities[0].name} (${departureCities[0].code})`,
-    departureCityCode: departureCities[0].code,
+    airline: airlines[0] ?? "",
+    departureCity: `${departureCities[0].name} (${code})`,
+    departureCityCode: code,
     durationDays: 14,
     departureDate: "",
     makkahHotelId: makkah?.id ?? null,
     madinahHotelId: madinah?.id ?? null,
     makkahNights: 8,
     madinahNights: 6,
-    roomType: "Quad",
+    roomTypes: ["Quad"],
     priceSharing: 0,
     priceQuad: null,
     priceTriple: null,
@@ -35,7 +48,7 @@ const emptyForm = (hotelOptions: HotelOption[]): PackageFormInput => {
     seatsAvailable: 40,
     packageCode: null,
     groupCode: null,
-    flightRoute: `${departureCities[0].code} → JED`,
+    flightRoute: `${code} → JED → ${code}`,
     flightOutboundNo: null,
     flightInboundNo: null,
     flightOutboundTime: null,
@@ -48,11 +61,13 @@ const emptyForm = (hotelOptions: HotelOption[]): PackageFormInput => {
 
 export function PackageWizard({
   hotelOptions,
+  airlines,
   mode,
   packageId,
   initialValues,
 }: {
   hotelOptions: HotelOption[];
+  airlines: string[];
   mode: "create" | "edit";
   packageId?: string;
   initialValues?: PackageFormInput;
@@ -60,10 +75,21 @@ export function PackageWizard({
   const [step, setStep] = useState(0);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState<PackageFormInput>(initialValues ?? emptyForm(hotelOptions));
-  const [customAirline, setCustomAirline] = useState(
-    () => !!initialValues && !airlines.includes(initialValues.airline),
+  const [form, setForm] = useState<PackageFormInput>(
+    initialValues ?? emptyForm(hotelOptions, airlines),
   );
+
+  // Airlines are DB-backed; keep a local copy so a freshly-added one shows immediately.
+  const [airlineList, setAirlineList] = useState<string[]>(() =>
+    initialValues && initialValues.airline && !airlines.includes(initialValues.airline)
+      ? [...airlines, initialValues.airline]
+      : airlines,
+  );
+  const [addingAirline, setAddingAirline] = useState(false);
+  const [newAirline, setNewAirline] = useState("");
+  const [airlineError, setAirlineError] = useState<string | null>(null);
+  const [airlinePending, startAirlineTransition] = useTransition();
+
   const [customCity, setCustomCity] = useState(
     () => !!initialValues && !departureCities.some((c) => c.code === initialValues.departureCityCode),
   );
@@ -75,6 +101,77 @@ export function PackageWizard({
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  function toggleRoomType(r: RoomType) {
+    setForm((f) => {
+      const selected = new Set(f.roomTypes as RoomType[]);
+      if (selected.has(r)) selected.delete(r);
+      else selected.add(r);
+      return { ...f, roomTypes: ROOM_TYPES.filter((x) => selected.has(x)) };
+    });
+  }
+
+  function priceFor(r: RoomType): number | null {
+    switch (r) {
+      case "Sharing":
+        return form.priceSharing;
+      case "Quad":
+        return form.priceQuad;
+      case "Triple":
+        return form.priceTriple;
+      case "Double":
+        return form.priceDouble;
+    }
+  }
+
+  function setPriceFor(r: RoomType, value: number | null) {
+    if (r === "Sharing") set("priceSharing", value ?? 0);
+    else if (r === "Quad") set("priceQuad", value);
+    else if (r === "Triple") set("priceTriple", value);
+    else set("priceDouble", value);
+  }
+
+  function handleAddAirline() {
+    const name = newAirline.trim();
+    if (!name) return;
+    setAirlineError(null);
+    startAirlineTransition(async () => {
+      try {
+        const { name: saved } = await createAirlineAction(name);
+        setAirlineList((list) => (list.includes(saved) ? list : [...list, saved]));
+        set("airline", saved);
+        setAddingAirline(false);
+        setNewAirline("");
+      } catch (e) {
+        setAirlineError(e instanceof Error ? e.message : "Could not add airline.");
+      }
+    });
+  }
+
+  const flightIssues = useMemo(
+    () =>
+      getFlightIssues({
+        outboundNo: form.flightOutboundNo,
+        inboundNo: form.flightInboundNo,
+        outboundTime: form.flightOutboundTime,
+        inboundTime: form.flightInboundTime,
+        departureTime: form.flightDepartureTime,
+        arrivalTime: form.flightArrivalTime,
+      }),
+    [
+      form.flightOutboundNo,
+      form.flightInboundNo,
+      form.flightOutboundTime,
+      form.flightInboundTime,
+      form.flightDepartureTime,
+      form.flightArrivalTime,
+    ],
+  );
+  const blockingIssues = flightIssues.filter((i) => i.kind === "block");
+  const overrideIssues = flightIssues.filter((i) => i.kind === "override");
+
+  const offeredPricesValid =
+    form.roomTypes.length > 0 && form.roomTypes.every((r) => (priceFor(r as RoomType) ?? 0) > 0);
+
   const canContinue = (() => {
     if (step === 0) {
       return Boolean(form.title.trim() && form.airline.trim() && form.departureDate && form.durationDays > 0);
@@ -82,16 +179,30 @@ export function PackageWizard({
     if (step === 1) {
       return Boolean(form.makkahHotelId && form.madinahHotelId && form.makkahNights >= 0 && form.madinahNights >= 0);
     }
+    if (step === 2) {
+      return blockingIssues.length === 0;
+    }
     if (step === 3) {
-      return form.priceSharing > 0 && form.seatsTotal >= 0 && form.seatsAvailable >= 0 && form.seatsAvailable <= form.seatsTotal;
+      return (
+        offeredPricesValid &&
+        form.seatsTotal >= 0 &&
+        form.seatsAvailable >= 0 &&
+        form.seatsAvailable <= form.seatsTotal
+      );
     }
     return true;
   })();
 
   const next = () => {
+    setError(null);
+    if (step === 2 && overrideIssues.length > 0) {
+      const proceed = window.confirm(
+        `${overrideIssues.map((o) => `• ${o.message}`).join("\n")}\n\nContinue anyway?`,
+      );
+      if (!proceed) return;
+    }
     if (step === steps.length - 2 && !form.packageCode) {
-      const serial = Date.now().toString().slice(-5);
-      setForm((f) => ({ ...f, packageCode: `UP-${serial}`, groupCode: f.groupCode ?? `UG-${serial}` }));
+      setForm((f) => ({ ...f, ...autoCodes(f.groupCode) }));
     }
     setStep((s) => Math.min(s + 1, steps.length - 1));
   };
@@ -99,6 +210,11 @@ export function PackageWizard({
 
   const makkahHotelName = makkahHotels.find((h) => h.id === form.makkahHotelId)?.name ?? "Select a hotel";
   const madinahHotelName = madinahHotels.find((h) => h.id === form.madinahHotelId)?.name ?? "Select a hotel";
+
+  const offeredPrices = form.roomTypes
+    .map((r) => priceFor(r as RoomType))
+    .filter((p): p is number => p != null && p > 0);
+  const fromPrice = offeredPrices.length ? Math.min(...offeredPrices) : 0;
 
   function handleSubmit() {
     setError(null);
@@ -121,11 +237,7 @@ export function PackageWizard({
       <ol className="mb-8 flex items-center">
         {steps.map((label, i) => (
           <li key={label} className="flex flex-1 items-center last:flex-none">
-            <button
-              type="button"
-              onClick={() => setStep(i)}
-              className="flex flex-col items-center gap-1.5"
-            >
+            <button type="button" onClick={() => setStep(i)} className="flex flex-col items-center gap-1.5">
               <span
                 className={clsx(
                   "flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition-colors",
@@ -187,7 +299,11 @@ export function PackageWizard({
                       />
                       <input
                         value={form.departureCityCode}
-                        onChange={(e) => set("departureCityCode", e.target.value.toUpperCase())}
+                        onChange={(e) => {
+                          const code = e.target.value.toUpperCase();
+                          set("departureCityCode", code);
+                          set("flightRoute", `${code} → JED → ${code}`);
+                        }}
                         placeholder="Code"
                         maxLength={4}
                         className={clsx(inputClass, "w-20 text-center uppercase")}
@@ -200,7 +316,7 @@ export function PackageWizard({
                         const city = departureCities.find((c) => c.code === v)!;
                         set("departureCityCode", city.code);
                         set("departureCity", `${city.name} (${city.code})`);
-                        set("flightRoute", `${city.code} → JED`);
+                        set("flightRoute", `${city.code} → JED → ${city.code}`);
                       }}
                     >
                       {departureCities.map((c) => (
@@ -214,23 +330,57 @@ export function PackageWizard({
                 </Field>
 
                 <Field label="Airline">
-                  {customAirline ? (
-                    <input
-                      value={form.airline}
-                      onChange={(e) => set("airline", e.target.value)}
-                      placeholder="Airline name"
-                      className={inputClass}
-                    />
+                  <Select value={form.airline} onChange={(v) => set("airline", v)}>
+                    {airlineList.map((a) => (
+                      <option key={a} value={a}>
+                        {a}
+                      </option>
+                    ))}
+                  </Select>
+                  {!addingAirline ? (
+                    <button
+                      type="button"
+                      onClick={() => setAddingAirline(true)}
+                      className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-secondary hover:underline"
+                    >
+                      <Icon name="add" className="text-sm" /> Add a new airline
+                    </button>
                   ) : (
-                    <Select value={form.airline} onChange={(v) => set("airline", v)}>
-                      {airlines.map((a) => (
-                        <option key={a} value={a}>
-                          {a}
-                        </option>
-                      ))}
-                    </Select>
+                    <div className="mt-2 flex gap-2">
+                      <input
+                        value={newAirline}
+                        onChange={(e) => setNewAirline(e.target.value)}
+                        placeholder="New airline name"
+                        className={inputClass}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddAirline();
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddAirline}
+                        disabled={airlinePending || !newAirline.trim()}
+                        className="shrink-0 rounded-lg bg-secondary-fixed px-3 py-2 text-sm font-semibold text-on-secondary-fixed disabled:opacity-50"
+                      >
+                        {airlinePending ? <Icon name="progress_activity" className="animate-spin text-base" /> : "Add"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAddingAirline(false);
+                          setNewAirline("");
+                          setAirlineError(null);
+                        }}
+                        className="shrink-0 rounded-lg px-2 text-sm text-on-surface-variant hover:text-on-surface"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   )}
-                  <ToggleCustom checked={customAirline} onChange={setCustomAirline} label="Use a different airline" />
+                  {airlineError && <p className="mt-1 text-xs text-error">{airlineError}</p>}
                 </Field>
               </div>
 
@@ -309,26 +459,6 @@ export function PackageWizard({
                   {form.durationDays} days — double check before publishing.
                 </p>
               )}
-
-              <Field label="Room type">
-                <div className="grid grid-cols-4 gap-3">
-                  {roomTypes.map((r) => (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => set("roomType", r)}
-                      className={clsx(
-                        "rounded-xl border p-3 text-center text-sm font-medium transition-colors",
-                        form.roomType === r
-                          ? "border-secondary bg-secondary-container text-on-secondary-container"
-                          : "border-outline-variant/50 text-on-surface-variant hover:border-secondary/40",
-                      )}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
-              </Field>
             </div>
           </StepShell>
         )}
@@ -340,7 +470,7 @@ export function PackageWizard({
                 <input
                   value={form.flightRoute ?? ""}
                   onChange={(e) => set("flightRoute", e.target.value || null)}
-                  placeholder="e.g. KHI → JED"
+                  placeholder="e.g. KHI → JED → KHI"
                   className={inputClass}
                 />
               </Field>
@@ -363,98 +493,126 @@ export function PackageWizard({
                 </Field>
               </div>
               <div className="grid gap-5 sm:grid-cols-2">
-                <Field label="Outbound check-in time">
-                  <input
-                    value={form.flightOutboundTime ?? ""}
-                    onChange={(e) => set("flightOutboundTime", e.target.value || null)}
-                    placeholder="e.g. 2:10 AM"
-                    className={inputClass}
-                  />
-                </Field>
-                <Field label="Inbound check-in time">
-                  <input
-                    value={form.flightInboundTime ?? ""}
-                    onChange={(e) => set("flightInboundTime", e.target.value || null)}
-                    placeholder="e.g. 1:40 AM"
-                    className={inputClass}
-                  />
-                </Field>
-              </div>
-              <div className="grid gap-5 sm:grid-cols-2">
                 <Field label="Departure time (from Pakistan)">
                   <input
+                    type="time"
                     value={form.flightDepartureTime ?? ""}
                     onChange={(e) => set("flightDepartureTime", e.target.value || null)}
-                    placeholder="e.g. 5:15 AM"
+                    className={inputClass}
+                  />
+                </Field>
+                <Field label="Outbound check-in time">
+                  <input
+                    type="time"
+                    value={form.flightOutboundTime ?? ""}
+                    onChange={(e) => set("flightOutboundTime", e.target.value || null)}
                     className={inputClass}
                   />
                 </Field>
                 <Field label="Arrival time (back home)">
                   <input
+                    type="time"
                     value={form.flightArrivalTime ?? ""}
                     onChange={(e) => set("flightArrivalTime", e.target.value || null)}
-                    placeholder="e.g. 6:45 AM"
+                    className={inputClass}
+                  />
+                </Field>
+                <Field label="Inbound check-in time">
+                  <input
+                    type="time"
+                    value={form.flightInboundTime ?? ""}
+                    onChange={(e) => set("flightInboundTime", e.target.value || null)}
                     className={inputClass}
                   />
                 </Field>
               </div>
+
+              {blockingIssues.length > 0 && (
+                <div className="space-y-1.5 rounded-lg border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">
+                  {blockingIssues.map((issue) => (
+                    <p key={issue.code} className="flex items-center gap-2">
+                      <Icon name="error" className="text-base" />
+                      {issue.message}
+                    </p>
+                  ))}
+                </div>
+              )}
+              {overrideIssues.length > 0 && (
+                <div className="space-y-1.5 rounded-lg border border-secondary/40 bg-secondary-container/30 px-4 py-3 text-sm text-on-secondary-container">
+                  {overrideIssues.map((issue) => (
+                    <p key={issue.code} className="flex items-center gap-2">
+                      <Icon name="warning" className="text-base" />
+                      {issue.message} You can still continue.
+                    </p>
+                  ))}
+                </div>
+              )}
             </div>
           </StepShell>
         )}
 
         {step === 3 && (
-          <StepShell title="Pricing & Seats" subtitle="Per-person price by room occupancy, in PKR.">
+          <StepShell title="Pricing & Seats" subtitle="Choose the room types offered, then set each per-person price (PKR).">
             <div className="space-y-6">
-              <div className="grid gap-5 sm:grid-cols-2">
-                <Field label="Sharing (base / from price)">
-                  <input
-                    type="number"
-                    min={0}
-                    value={form.priceSharing}
-                    onChange={(e) => set("priceSharing", Number(e.target.value))}
-                    className={inputClass}
-                  />
-                </Field>
-                <Field label="Quad">
-                  <input
-                    type="number"
-                    min={0}
-                    value={form.priceQuad ?? ""}
-                    onChange={(e) => set("priceQuad", e.target.value ? Number(e.target.value) : null)}
-                    placeholder={String(form.priceSharing || 0)}
-                    className={inputClass}
-                  />
-                </Field>
-                <Field label="Triple">
-                  <input
-                    type="number"
-                    min={0}
-                    value={form.priceTriple ?? ""}
-                    onChange={(e) => set("priceTriple", e.target.value ? Number(e.target.value) : null)}
-                    placeholder={String(form.priceSharing || 0)}
-                    className={inputClass}
-                  />
-                </Field>
-                <Field label="Double">
-                  <input
-                    type="number"
-                    min={0}
-                    value={form.priceDouble ?? ""}
-                    onChange={(e) => set("priceDouble", e.target.value ? Number(e.target.value) : null)}
-                    placeholder={String(form.priceSharing || 0)}
-                    className={inputClass}
-                  />
-                </Field>
-                <Field label="Infant">
-                  <input
-                    type="number"
-                    min={0}
-                    value={form.priceInfant ?? ""}
-                    onChange={(e) => set("priceInfant", e.target.value ? Number(e.target.value) : null)}
-                    className={inputClass}
-                  />
-                </Field>
-              </div>
+              <Field label="Room types offered (select all that apply)">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {ROOM_TYPES.map((r) => {
+                    const active = form.roomTypes.includes(r);
+                    return (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => toggleRoomType(r)}
+                        className={clsx(
+                          "flex items-center justify-center gap-1.5 rounded-xl border p-3 text-center text-sm font-medium transition-colors",
+                          active
+                            ? "border-secondary bg-secondary-container text-on-secondary-container"
+                            : "border-outline-variant/50 text-on-surface-variant hover:border-secondary/40",
+                        )}
+                      >
+                        {active && <Icon name="check" className="text-base" />}
+                        {r}
+                      </button>
+                    );
+                  })}
+                </div>
+              </Field>
+
+              {form.roomTypes.length === 0 ? (
+                <p className="rounded-lg border border-outline-variant/40 bg-surface-container-low px-4 py-3 text-sm text-on-surface-variant">
+                  Select at least one room type to set its price.
+                </p>
+              ) : (
+                <div className="grid gap-5 sm:grid-cols-2">
+                  {form.roomTypes.map((r) => {
+                    const price = priceFor(r as RoomType);
+                    return (
+                      <Field key={r} label={`${r} — per person (PKR)`}>
+                        <input
+                          type="number"
+                          min={0}
+                          value={price ? String(price) : ""}
+                          onChange={(e) =>
+                            setPriceFor(r as RoomType, e.target.value ? Number(e.target.value) : null)
+                          }
+                          placeholder="e.g. 285000"
+                          className={inputClass}
+                        />
+                      </Field>
+                    );
+                  })}
+                </div>
+              )}
+
+              <Field label="Infant — per person (PKR, optional)">
+                <input
+                  type="number"
+                  min={0}
+                  value={form.priceInfant ?? ""}
+                  onChange={(e) => set("priceInfant", e.target.value ? Number(e.target.value) : null)}
+                  className={clsx(inputClass, "sm:max-w-xs")}
+                />
+              </Field>
 
               <div className="grid gap-5 sm:grid-cols-2">
                 <Field label="Total seats">
@@ -519,8 +677,8 @@ export function PackageWizard({
                   <SummaryItem label="Duration" value={`${form.durationDays} days`} />
                   <SummaryItem label="Makkah" value={`${makkahHotelName} (${form.makkahNights}n)`} />
                   <SummaryItem label="Madinah" value={`${madinahHotelName} (${form.madinahNights}n)`} />
-                  <SummaryItem label="Room" value={form.roomType} />
-                  <SummaryItem label="From price" value={formatPkr(form.priceSharing || 0)} />
+                  <SummaryItem label="Room types" value={form.roomTypes.join(", ") || "—"} />
+                  <SummaryItem label="From price" value={formatPkr(fromPrice)} />
                   <SummaryItem label="Seats" value={`${form.seatsAvailable}/${form.seatsTotal}`} />
                   <SummaryItem label="Featured" value={form.featured ? "Yes" : "No"} />
                 </dl>

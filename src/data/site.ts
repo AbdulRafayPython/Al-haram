@@ -14,6 +14,9 @@ export const site = {
   whatsappHref: "https://wa.me/923390278667",
   address: "Office #31, Adam Arcade, Bahadurabad BMCHS Sharafabad, Karachi, Pakistan",
   hours: "11:00 AM – 10:00 PM (Sunday Closed)",
+  // Static payment QR shown after a booking is confirmed. Drop the real
+  // JazzCash/EasyPaisa/bank QR image at this path in /public.
+  paymentQrSrc: "/images/payment-qr.png",
   // TODO: swap in the real profile URLs once available — placeholders for now.
   social: {
     facebook: "#",
