@@ -7,7 +7,7 @@ import { Reveal } from "@/components/ui/Reveal";
 import { BoardCard } from "@/components/home/BoardCard";
 import { Hero } from "@/components/home/Hero";
 import { BlendImage } from "@/components/ui/BlendImage";
-import { airlines } from "@/data/packages";
+import { getAllAirlines } from "@/lib/data/airlines";
 import { getVisas } from "@/lib/data/visas";
 import { getTestimonials } from "@/lib/data/testimonials";
 import { stats, site } from "@/data/site";
@@ -75,7 +75,11 @@ const features = [
 ];
 
 export default async function HomePage() {
-  const [visas, testimonials] = await Promise.all([getVisas(), getTestimonials()]);
+  const [visas, testimonials, airlines] = await Promise.all([
+    getVisas(),
+    getTestimonials(),
+    getAllAirlines(),
+  ]);
 
   return (
     <>
@@ -83,23 +87,35 @@ export default async function HomePage() {
       <Hero />
 
       {/* ---------------- Partners ---------------- */}
-      <section className="bg-surface-container-low py-10 md:py-12">
-        <Container>
-          <p className="mb-7 text-center text-xs font-semibold uppercase tracking-[0.3em] text-on-surface-variant">
-            Trusted Airline &amp; Travel Partners
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-5 md:gap-x-14">
-            {airlines.map((a) => (
-              <span
-                key={a}
-                className="text-lg font-bold tracking-tight text-on-surface-variant/60 grayscale transition-all duration-300 hover:text-secondary hover:grayscale-0 md:text-xl"
-              >
-                {a}
-              </span>
-            ))}
-          </div>
-        </Container>
-      </section>
+      {airlines.length > 0 && (
+        <section className="bg-surface-container-low py-10 md:py-12">
+          <Container>
+            <p className="mb-7 text-center text-xs font-semibold uppercase tracking-[0.3em] text-on-surface-variant">
+              Trusted Airline &amp; Travel Partners
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-5 md:gap-x-14">
+              {airlines.map((a) =>
+                a.logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={a.id}
+                    src={a.logoUrl}
+                    alt={a.name}
+                    className="h-9 w-auto object-contain opacity-60 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0 md:h-10"
+                  />
+                ) : (
+                  <span
+                    key={a.id}
+                    className="text-lg font-bold tracking-tight text-on-surface-variant/60 grayscale transition-all duration-300 hover:text-secondary hover:grayscale-0 md:text-xl"
+                  >
+                    {a.name}
+                  </span>
+                ),
+              )}
+            </div>
+          </Container>
+        </section>
+      )}
 
       {/* ---------------- Intro ---------------- */}
       <section className="bg-surface py-16 md:py-24">

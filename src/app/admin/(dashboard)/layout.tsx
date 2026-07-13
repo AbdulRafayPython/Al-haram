@@ -9,6 +9,8 @@ const navItems = [
   { href: "/admin/packages", icon: "flight_class", label: "Umrah Packages" },
   { href: "/admin/packages/new", icon: "add_circle", label: "Add Package" },
   { href: "/admin/hotels", icon: "apartment", label: "Hotels" },
+  { href: "/admin/airlines", icon: "flight", label: "Airlines" },
+  { href: "/admin/cities", icon: "location_city", label: "Cities" },
 ];
 
 export default function AdminDashboardLayout({
@@ -16,8 +18,8 @@ export default function AdminDashboardLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <div className="flex min-h-screen flex-col bg-background md:flex-row">
-      {/* Sidebar */}
-      <aside className="flex shrink-0 flex-col justify-between border-b border-white/10 bg-surface text-on-surface md:w-64 md:border-b-0 md:border-r">
+      {/* Sidebar — pinned to the viewport on desktop so it doesn't scroll away on tall pages */}
+      <aside className="flex shrink-0 flex-col justify-between overflow-y-auto border-b border-white/10 bg-surface text-on-surface md:sticky md:top-0 md:h-screen md:w-64 md:self-start md:border-b-0 md:border-r">
         <div>
           <div className="flex items-center gap-2.5 px-6 py-5">
             {/* eslint-disable-next-line @next/next/no-img-element */}

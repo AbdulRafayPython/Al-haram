@@ -32,15 +32,6 @@ const SERVICE_ICONS: Record<string, SvgIcon> = {
   "Return Ticket": ReturnTicketIcon,
 };
 
-/**
- * Airline name → logo file. Empty until the real logos are uploaded to
- * /public/logo/airlines/*. Unmapped airlines get a clean initials fallback,
- * so the card never shows a broken image.
- */
-const AIRLINE_LOGOS: Record<string, string> = {
-  // "Saudia": "/logo/airlines/saudia.png",
-};
-
 function airlineInitials(name: string): string {
   return name
     .split(/\s+/)
@@ -166,7 +157,7 @@ export function PackageCard({ pkg, packageNumber }: { pkg: UmrahPackage; package
                   {/* Center: airline above, plane in the middle, route below */}
                   <div className="flex flex-col items-center gap-1.5 px-1 text-center">
                     <div className="flex items-center gap-2">
-                      <AirlineLogo name={pkg.airline} />
+                      <AirlineLogo name={pkg.airline} logoUrl={pkg.airlineLogoUrl} />
                       <span className="font-[var(--font-heading)] text-sm font-semibold text-on-surface">
                         {pkg.airline}
                       </span>
@@ -195,7 +186,7 @@ export function PackageCard({ pkg, packageNumber }: { pkg: UmrahPackage; package
             ) : (
               <div className="flex flex-col items-center gap-2.5 py-2 text-center">
                 <div className="flex items-center gap-2.5">
-                  <AirlineLogo name={pkg.airline} />
+                  <AirlineLogo name={pkg.airline} logoUrl={pkg.airlineLogoUrl} />
                   <span className="font-[var(--font-heading)] text-sm font-semibold text-on-surface">
                     {pkg.airline}
                   </span>
@@ -323,11 +314,10 @@ export function PackageCard({ pkg, packageNumber }: { pkg: UmrahPackage; package
 
 // --- Subcomponents ----------------------------------------------------------
 
-function AirlineLogo({ name }: { name: string }) {
-  const src = AIRLINE_LOGOS[name];
-  if (src) {
+function AirlineLogo({ name, logoUrl }: { name: string; logoUrl?: string | null }) {
+  if (logoUrl) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={src} alt={name} className="h-8 w-8 rounded-md bg-white/90 object-contain p-0.5" />;
+    return <img src={logoUrl} alt={name} className="h-8 w-8 rounded-md bg-white/90 object-contain p-0.5" />;
   }
   return (
     <span className="flex h-8 min-w-8 items-center justify-center rounded-md bg-secondary-container px-1.5 text-[0.7rem] font-bold tracking-wide text-on-secondary-container">

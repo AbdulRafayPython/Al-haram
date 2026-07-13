@@ -4,16 +4,17 @@ import { useMemo, useState, useTransition } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { clsx } from "@/lib/clsx";
 import { formatPkr } from "@/lib/format";
-import { departureCities } from "@/data/packages";
 import { ROOM_TYPES, type RoomType } from "@/data/types";
 import { getFlightIssues } from "@/lib/flight";
 import {
   createAirlineAction,
+  createCityAction,
   createPackageAction,
   updatePackageAction,
   type PackageFormInput,
 } from "@/app/admin/actions";
 import type { HotelOption } from "@/lib/data/packages";
+import type { CityOption } from "@/lib/data/cities";
 
 const steps = ["Route & Airline", "Hotels & Stay", "Flight Details", "Pricing & Seats", "Review"] as const;
 
@@ -23,14 +24,15 @@ function autoCodes(existingGroup: string | null): { packageCode: string; groupCo
   return { packageCode: `UP-${serial}`, groupCode: existingGroup ?? `UG-${serial}` };
 }
 
-const emptyForm = (hotelOptions: HotelOption[], airlines: string[]): PackageFormInput => {
+const emptyForm = (hotelOptions: HotelOption[], airlines: string[], cities: CityOption[]): PackageFormInput => {
   const makkah = hotelOptions.find((h) => h.city === "Makkah");
   const madinah = hotelOptions.find((h) => h.city === "Madinah");
-  const code = departureCities[0].code;
+  const firstCity = cities[0];
+  const code = firstCity?.code ?? "";
   return {
     title: "",
     airline: airlines[0] ?? "",
-    departureCity: `${departureCities[0].name} (${code})`,
+    departureCity: firstCity ? `${firstCity.name} (${code})` : "",
     departureCityCode: code,
     durationDays: 14,
     departureDate: "",
@@ -48,7 +50,7 @@ const emptyForm = (hotelOptions: HotelOption[], airlines: string[]): PackageForm
     seatsAvailable: 40,
     packageCode: null,
     groupCode: null,
-    flightRoute: `${code} → JED → ${code}`,
+    flightRoute: code ? `${code} → JED → ${code}` : null,
     flightOutboundNo: null,
     flightInboundNo: null,
     flightOutboundTime: null,
@@ -59,15 +61,22 @@ const emptyForm = (hotelOptions: HotelOption[], airlines: string[]): PackageForm
   };
 };
 
+/** Strip a trailing " (CODE)" suffix so a fallback dropdown entry shows just the city name. */
+function stripCityCode(label: string): string {
+  return label.replace(/\s*\([^)]*\)\s*$/, "");
+}
+
 export function PackageWizard({
   hotelOptions,
   airlines,
+  cities,
   mode,
   packageId,
   initialValues,
 }: {
   hotelOptions: HotelOption[];
   airlines: string[];
+  cities: CityOption[];
   mode: "create" | "edit";
   packageId?: string;
   initialValues?: PackageFormInput;
@@ -76,7 +85,7 @@ export function PackageWizard({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<PackageFormInput>(
-    initialValues ?? emptyForm(hotelOptions, airlines),
+    initialValues ?? emptyForm(hotelOptions, airlines, cities),
   );
 
   // Airlines are DB-backed; keep a local copy so a freshly-added one shows immediately.
@@ -90,9 +99,19 @@ export function PackageWizard({
   const [airlineError, setAirlineError] = useState<string | null>(null);
   const [airlinePending, startAirlineTransition] = useTransition();
 
-  const [customCity, setCustomCity] = useState(
-    () => !!initialValues && !departureCities.some((c) => c.code === initialValues.departureCityCode),
+  // Cities are DB-backed the same way as airlines.
+  const [cityList, setCityList] = useState<CityOption[]>(() =>
+    initialValues &&
+    initialValues.departureCityCode &&
+    !cities.some((c) => c.code === initialValues.departureCityCode)
+      ? [...cities, { code: initialValues.departureCityCode, name: stripCityCode(initialValues.departureCity) }]
+      : cities,
   );
+  const [addingCity, setAddingCity] = useState(false);
+  const [newCityName, setNewCityName] = useState("");
+  const [newCityCode, setNewCityCode] = useState("");
+  const [cityError, setCityError] = useState<string | null>(null);
+  const [cityPending, startCityTransition] = useTransition();
 
   const makkahHotels = useMemo(() => hotelOptions.filter((h) => h.city === "Makkah"), [hotelOptions]);
   const madinahHotels = useMemo(() => hotelOptions.filter((h) => h.city === "Madinah"), [hotelOptions]);
@@ -143,6 +162,27 @@ export function PackageWizard({
         setNewAirline("");
       } catch (e) {
         setAirlineError(e instanceof Error ? e.message : "Could not add airline.");
+      }
+    });
+  }
+
+  function handleAddCity() {
+    const name = newCityName.trim();
+    const code = newCityCode.trim().toUpperCase();
+    if (!name || !code) return;
+    setCityError(null);
+    startCityTransition(async () => {
+      try {
+        const saved = await createCityAction(name, code);
+        setCityList((list) => (list.some((c) => c.code === saved.code) ? list : [...list, saved]));
+        set("departureCityCode", saved.code);
+        set("departureCity", `${saved.name} (${saved.code})`);
+        set("flightRoute", `${saved.code} → JED → ${saved.code}`);
+        setAddingCity(false);
+        setNewCityName("");
+        setNewCityCode("");
+      } catch (e) {
+        setCityError(e instanceof Error ? e.message : "Could not add city.");
       }
     });
   }
@@ -289,44 +329,80 @@ export function PackageWizard({
 
               <div className="grid gap-5 sm:grid-cols-2">
                 <Field label="Departure city">
-                  {customCity ? (
-                    <div className="grid grid-cols-[1fr_auto] gap-2">
+                  <Select
+                    value={form.departureCityCode}
+                    onChange={(v) => {
+                      const city = cityList.find((c) => c.code === v);
+                      if (!city) return;
+                      set("departureCityCode", city.code);
+                      set("departureCity", `${city.name} (${city.code})`);
+                      set("flightRoute", `${city.code} → JED → ${city.code}`);
+                    }}
+                  >
+                    {cityList.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.name} ({c.code})
+                      </option>
+                    ))}
+                  </Select>
+                  {!addingCity ? (
+                    <button
+                      type="button"
+                      onClick={() => setAddingCity(true)}
+                      className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-secondary hover:underline"
+                    >
+                      <Icon name="add" className="text-sm" /> Add a new city
+                    </button>
+                  ) : (
+                    <div className="mt-2 flex gap-2">
                       <input
-                        value={form.departureCity}
-                        onChange={(e) => set("departureCity", e.target.value)}
-                        placeholder="e.g. Quetta (UET)"
+                        value={newCityName}
+                        onChange={(e) => setNewCityName(e.target.value)}
+                        placeholder="City name"
                         className={inputClass}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddCity();
+                          }
+                        }}
                       />
                       <input
-                        value={form.departureCityCode}
-                        onChange={(e) => {
-                          const code = e.target.value.toUpperCase();
-                          set("departureCityCode", code);
-                          set("flightRoute", `${code} → JED → ${code}`);
-                        }}
+                        value={newCityCode}
+                        onChange={(e) => setNewCityCode(e.target.value.toUpperCase())}
                         placeholder="Code"
                         maxLength={4}
                         className={clsx(inputClass, "w-20 text-center uppercase")}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddCity();
+                          }
+                        }}
                       />
+                      <button
+                        type="button"
+                        onClick={handleAddCity}
+                        disabled={cityPending || !newCityName.trim() || !newCityCode.trim()}
+                        className="shrink-0 rounded-lg bg-secondary-fixed px-3 py-2 text-sm font-semibold text-on-secondary-fixed disabled:opacity-50"
+                      >
+                        {cityPending ? <Icon name="progress_activity" className="animate-spin text-base" /> : "Add"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAddingCity(false);
+                          setNewCityName("");
+                          setNewCityCode("");
+                          setCityError(null);
+                        }}
+                        className="shrink-0 rounded-lg px-2 text-sm text-on-surface-variant hover:text-on-surface"
+                      >
+                        Cancel
+                      </button>
                     </div>
-                  ) : (
-                    <Select
-                      value={form.departureCityCode}
-                      onChange={(v) => {
-                        const city = departureCities.find((c) => c.code === v)!;
-                        set("departureCityCode", city.code);
-                        set("departureCity", `${city.name} (${city.code})`);
-                        set("flightRoute", `${city.code} → JED → ${city.code}`);
-                      }}
-                    >
-                      {departureCities.map((c) => (
-                        <option key={c.code} value={c.code}>
-                          {c.name} ({c.code})
-                        </option>
-                      ))}
-                    </Select>
                   )}
-                  <ToggleCustom checked={customCity} onChange={setCustomCity} label="Use a different city" />
+                  {cityError && <p className="mt-1 text-xs text-error">{cityError}</p>}
                 </Field>
 
                 <Field label="Airline">
@@ -774,28 +850,6 @@ function Select({
         className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xl text-on-surface-variant"
       />
     </div>
-  );
-}
-
-function ToggleCustom({
-  checked,
-  onChange,
-  label,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  label: string;
-}) {
-  return (
-    <label className="mt-1.5 flex items-center gap-2 text-xs text-on-surface-variant">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="h-3.5 w-3.5 accent-secondary"
-      />
-      {label}
-    </label>
   );
 }
 

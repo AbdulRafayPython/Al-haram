@@ -86,6 +86,29 @@
     font-weight: 700;
     letter-spacing: -0.01em;
   }
+
+  /* Tailwind's preflight resets buttons to `cursor: default`, which reads as
+     non-interactive. Every clickable control should show a pointer. */
+  button:not(:disabled),
+  [type="button"]:not(:disabled),
+  [type="submit"]:not(:disabled),
+  [type="reset"]:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a[href],
+  select,
+  summary,
+  label[for],
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [type="button"]:disabled,
+  [type="submit"]:disabled,
+  [role="button"][aria-disabled="true"] {
+    cursor: not-allowed;
+  }
 }
 
 /* Material Symbols defaults */

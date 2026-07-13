@@ -6,8 +6,8 @@ import { PackageCard } from "@/components/packages/PackageCard";
 import { DepartureCalendar } from "@/components/packages/DepartureCalendar";
 import { clsx } from "@/lib/clsx";
 import { formatDate } from "@/lib/format";
-import { departureCities, airlines } from "@/data/packages";
 import type { UmrahPackage } from "@/data/types";
+import type { CityOption } from "@/lib/data/cities";
 
 /**
  * Sentinel used by the "Select All" choices in the Airline / Package dropdowns.
@@ -42,7 +42,15 @@ function buildNumbering(packages: UmrahPackage[]): Map<string, number> {
  * options that still have available packages. The Package step lists each
  * departure by its duration (days).
  */
-export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
+export function PackageBoard({
+  packages,
+  cities,
+  airlines,
+}: {
+  packages: UmrahPackage[];
+  cities: CityOption[];
+  airlines: string[];
+}) {
   // Sold-out departures are never shown.
   const availablePackages = useMemo(
     () => packages.filter((p) => p.seatsAvailable > 0),
@@ -63,8 +71,8 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
   // --- Cascading option lists (each narrows the next) --------------------
   const cityOptions = useMemo(() => {
     const codes = new Set(availablePackages.map((p) => p.departureCityCode));
-    return departureCities.filter((c) => codes.has(c.code));
-  }, [availablePackages]);
+    return cities.filter((c) => codes.has(c.code));
+  }, [availablePackages, cities]);
 
   const airlineOptions = useMemo(() => {
     if (!city) return [];
@@ -72,7 +80,7 @@ export function PackageBoard({ packages }: { packages: UmrahPackage[] }) {
       availablePackages.filter((p) => p.departureCityCode === city).map((p) => p.airline),
     );
     return airlines.filter((a) => set.has(a));
-  }, [availablePackages, city]);
+  }, [availablePackages, city, airlines]);
 
   const packageOptions = useMemo(() => {
     if (!city || !airline) return [];

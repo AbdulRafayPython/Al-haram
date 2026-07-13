@@ -4,6 +4,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Icon } from "@/components/ui/Icon";
 import { PackageBoard } from "@/components/packages/PackageBoard";
 import { getPublishedPackages, getPackageStats, getCityBreakdown } from "@/lib/data/packages";
+import { getCities } from "@/lib/data/cities";
+import { getAirlines } from "@/lib/data/airlines";
 import { formatNumber } from "@/lib/format";
 
 export const metadata: Metadata = {
@@ -17,7 +19,11 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function UmrahPackagesPage() {
-  const packages = await getPublishedPackages();
+  const [packages, cities, airlines] = await Promise.all([
+    getPublishedPackages(),
+    getCities(),
+    getAirlines(),
+  ]);
   const packageStats = getPackageStats(packages);
   const cityBreakdown = getCityBreakdown(packages);
 
@@ -44,7 +50,7 @@ export default async function UmrahPackagesPage() {
       {/* Board */}
       <section className="py-6 md:py-8">
         <Container>
-          <PackageBoard packages={packages} />
+          <PackageBoard packages={packages} cities={cities} airlines={airlines} />
         </Container>
       </section>
 

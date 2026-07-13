@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getHotelOptions } from "@/lib/data/packages";
 import { getAirlines } from "@/lib/data/airlines";
+import { getCities } from "@/lib/data/cities";
 import { PackageWizard } from "../PackageWizard";
 
 export const metadata: Metadata = {
@@ -9,7 +10,11 @@ export const metadata: Metadata = {
 };
 
 export default async function NewPackagePage() {
-  const [hotelOptions, airlines] = await Promise.all([getHotelOptions(), getAirlines()]);
+  const [hotelOptions, airlines, cities] = await Promise.all([
+    getHotelOptions(),
+    getAirlines(),
+    getCities(),
+  ]);
 
   return (
     <div>
@@ -18,7 +23,7 @@ export default async function NewPackagePage() {
         Walk through each step to publish a new departure to the live board.
       </p>
       <div className="mt-6">
-        <PackageWizard hotelOptions={hotelOptions} airlines={airlines} mode="create" />
+        <PackageWizard hotelOptions={hotelOptions} airlines={airlines} cities={cities} mode="create" />
       </div>
     </div>
   );

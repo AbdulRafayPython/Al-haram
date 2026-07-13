@@ -39,6 +39,8 @@ export interface UmrahPackage {
   madinahHotel: string;
   /** Room tiers this package offers (multi-select). Cheapest offered tier drives sort/"from" price. */
   roomTypes: RoomType[];
+  /** Uploaded airline logo (WebP), if the admin has set one for this airline. */
+  airlineLogoUrl?: string | null;
   pricePkr: number;
   seatsTotal: number;
   seatsAvailable: number;

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getHotelOptions, getPackageRowById } from "@/lib/data/packages";
 import { getAirlines } from "@/lib/data/airlines";
+import { getCities } from "@/lib/data/cities";
 import { toTimeInputValue } from "@/lib/flight";
 import { PackageWizard } from "../../PackageWizard";
 import type { PackageFormInput } from "@/app/admin/actions";
@@ -17,9 +18,10 @@ export default async function EditPackagePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [hotelOptions, airlines, row] = await Promise.all([
+  const [hotelOptions, airlines, cities, row] = await Promise.all([
     getHotelOptions(),
     getAirlines(),
+    getCities(),
     getPackageRowById(id).catch(() => null),
   ]);
 
@@ -71,6 +73,7 @@ export default async function EditPackagePage({
         <PackageWizard
           hotelOptions={hotelOptions}
           airlines={airlines}
+          cities={cities}
           mode="edit"
           packageId={id}
           initialValues={initialValues}

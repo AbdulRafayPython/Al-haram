@@ -2,6 +2,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/supabase/types";
 import type { RoomType, UmrahPackage } from "@/data/types";
+import { getAirlineLogoMap } from "@/lib/data/airlines";
 
 type PackageRow = Tables<"packages"> & {
   makkah_hotel: Tables<"hotels"> | null;
@@ -17,11 +18,12 @@ function addDays(iso: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-function toUmrahPackage(row: PackageRow): UmrahPackage {
+function toUmrahPackage(row: PackageRow, logoMap: Record<string, string> = {}): UmrahPackage {
   return {
     id: row.id,
     title: row.title,
     airline: row.airline,
+    airlineLogoUrl: logoMap[row.airline] ?? null,
     departureCity: row.departure_city,
     departureCityCode: row.departure_city_code,
     durationDays: row.duration_days,
@@ -68,14 +70,17 @@ function toUmrahPackage(row: PackageRow): UmrahPackage {
 /** Public board: only published departures, soonest first. */
 export async function getPublishedPackages(): Promise<UmrahPackage[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("packages")
-    .select(PACKAGE_SELECT)
-    .eq("is_published", true)
-    .order("departure_date", { ascending: true });
+  const [{ data, error }, logoMap] = await Promise.all([
+    supabase
+      .from("packages")
+      .select(PACKAGE_SELECT)
+      .eq("is_published", true)
+      .order("departure_date", { ascending: true }),
+    getAirlineLogoMap(),
+  ]);
 
   if (error) throw error;
-  return (data as unknown as PackageRow[]).map(toUmrahPackage);
+  return (data as unknown as PackageRow[]).map((row) => toUmrahPackage(row, logoMap));
 }
 
 export interface AdminPackage extends UmrahPackage {
@@ -85,14 +90,14 @@ export interface AdminPackage extends UmrahPackage {
 /** Admin list: every package regardless of publish state, newest first. */
 export async function getAllPackagesForAdmin(): Promise<AdminPackage[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("packages")
-    .select(PACKAGE_SELECT)
-    .order("created_at", { ascending: false });
+  const [{ data, error }, logoMap] = await Promise.all([
+    supabase.from("packages").select(PACKAGE_SELECT).order("created_at", { ascending: false }),
+    getAirlineLogoMap(),
+  ]);
 
   if (error) throw error;
   return (data as unknown as PackageRow[]).map((row) => ({
-    ...toUmrahPackage(row),
+    ...toUmrahPackage(row, logoMap),
     isPublished: row.is_published,
   }));
 }

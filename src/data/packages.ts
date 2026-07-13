@@ -1,26 +1,9 @@
 /**
- * Static UI vocabulary for the Umrah Packages board filters and card footer.
- * Package records, stats, and testimonials are DB-backed — see src/lib/data/.
+ * Static UI vocabulary for the Umrah Packages card footer. Departure cities and
+ * airlines are admin-managed and DB-backed — see src/lib/data/cities.ts and
+ * src/lib/data/airlines.ts. Package records, stats, and testimonials are also
+ * DB-backed — see src/lib/data/.
  */
-
-export const departureCities = [
-  { code: "KHI", name: "Karachi" },
-  { code: "ISB", name: "Islamabad" },
-  { code: "LHE", name: "Lahore" },
-  { code: "MUX", name: "Multan" },
-  { code: "PEW", name: "Peshawar" },
-];
-
-export const airlines = [
-  "Saudia",
-  "PIA",
-  "Fly Jinnah",
-  "Airblue",
-  "Emirates",
-  "FlyDubai",
-  "Air Arabia",
-  "SalamAir",
-];
 
 /** Services bundled into every Umrah package. */
 export const includedServices = [

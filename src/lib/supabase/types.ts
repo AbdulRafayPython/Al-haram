@@ -23,6 +23,7 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          logo_url: string | null
           name: string
           sort_order: number
         }
@@ -30,6 +31,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          logo_url?: string | null
           name: string
           sort_order?: number
         }
@@ -37,6 +39,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          logo_url?: string | null
           name?: string
           sort_order?: number
         }
@@ -97,6 +100,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      cities: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
       }
       contacts: {
         Row: {
