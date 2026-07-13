@@ -48,6 +48,7 @@ export type Database = {
       bookings: {
         Row: {
           adults: number
+          child_no_bed: number
           children: number
           created_at: string
           id: string
@@ -63,6 +64,7 @@ export type Database = {
         }
         Insert: {
           adults?: number
+          child_no_bed?: number
           children?: number
           created_at?: string
           id?: string
@@ -78,6 +80,7 @@ export type Database = {
         }
         Update: {
           adults?: number
+          child_no_bed?: number
           children?: number
           created_at?: string
           id?: string
@@ -209,12 +212,12 @@ export type Database = {
           departure_date: string
           duration_days: number
           featured: boolean
+          flight_arrival_date: string | null
           flight_arrival_time: string | null
+          flight_departure_date: string | null
           flight_departure_time: string | null
           flight_inbound_no: string | null
-          flight_inbound_time: string | null
           flight_outbound_no: string | null
-          flight_outbound_time: string | null
           flight_route: string | null
           group_code: string | null
           id: string
@@ -224,6 +227,7 @@ export type Database = {
           makkah_hotel_id: string | null
           makkah_nights: number
           package_code: string | null
+          price_child_no_bed: number | null
           price_double: number | null
           price_infant: number | null
           price_pkr: number
@@ -245,12 +249,12 @@ export type Database = {
           departure_date: string
           duration_days: number
           featured?: boolean
+          flight_arrival_date?: string | null
           flight_arrival_time?: string | null
+          flight_departure_date?: string | null
           flight_departure_time?: string | null
           flight_inbound_no?: string | null
-          flight_inbound_time?: string | null
           flight_outbound_no?: string | null
-          flight_outbound_time?: string | null
           flight_route?: string | null
           group_code?: string | null
           id?: string
@@ -260,6 +264,7 @@ export type Database = {
           makkah_hotel_id?: string | null
           makkah_nights?: number
           package_code?: string | null
+          price_child_no_bed?: number | null
           price_double?: number | null
           price_infant?: number | null
           price_pkr: number
@@ -281,12 +286,12 @@ export type Database = {
           departure_date?: string
           duration_days?: number
           featured?: boolean
+          flight_arrival_date?: string | null
           flight_arrival_time?: string | null
+          flight_departure_date?: string | null
           flight_departure_time?: string | null
           flight_inbound_no?: string | null
-          flight_inbound_time?: string | null
           flight_outbound_no?: string | null
-          flight_outbound_time?: string | null
           flight_route?: string | null
           group_code?: string | null
           id?: string
@@ -296,6 +301,7 @@ export type Database = {
           makkah_hotel_id?: string | null
           makkah_nights?: number
           package_code?: string | null
+          price_child_no_bed?: number | null
           price_double?: number | null
           price_infant?: number | null
           price_pkr?: number

@@ -70,6 +70,7 @@ export function PackageCard({ pkg, packageNumber }: { pkg: UmrahPackage; package
     triple: pkg.pricePkr,
     double: pkg.pricePkr,
     infant: 0,
+    childNoBed: 0,
   };
   const flight = pkg.flight;
 
@@ -148,8 +149,7 @@ export function PackageCard({ pkg, packageNumber }: { pkg: UmrahPackage; package
                       label="Departure"
                       bigTime={formatClock(flight.departureTime) || "—"}
                       flightNo={flight.outboundNo}
-                      date={pkg.departureDate}
-                      checkIn={flight.outboundTime}
+                      date={flight.departureDate || pkg.departureDate}
                     />
                     <span className="hidden h-px flex-1 border-t border-dashed border-outline-variant/70 sm:block" />
                   </div>
@@ -176,8 +176,7 @@ export function PackageCard({ pkg, packageNumber }: { pkg: UmrahPackage; package
                       label="Arrival"
                       bigTime={formatClock(flight.arrivalTime) || "—"}
                       flightNo={flight.inboundNo}
-                      date={returnDate}
-                      checkIn={flight.inboundTime}
+                      date={flight.arrivalDate || returnDate}
                       alignEnd
                     />
                   </div>
@@ -230,9 +229,19 @@ export function PackageCard({ pkg, packageNumber }: { pkg: UmrahPackage; package
                 );
               })}
             </div>
-            {pricing.infant > 0 && (
-              <p className="mt-2.5 text-xs text-on-surface-variant">
-                Infant: <span className="font-medium text-on-surface">{formatPkr(pricing.infant)}</span>
+            {(pricing.infant > 0 || pricing.childNoBed > 0) && (
+              <p className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-on-surface-variant">
+                {pricing.infant > 0 && (
+                  <span>
+                    Infant: <span className="font-medium text-on-surface">{formatPkr(pricing.infant)}</span>
+                  </span>
+                )}
+                {pricing.childNoBed > 0 && (
+                  <span>
+                    Child (No Bed):{" "}
+                    <span className="font-medium text-on-surface">{formatPkr(pricing.childNoBed)}</span>
+                  </span>
+                )}
               </p>
             )}
           </section>
@@ -303,6 +312,7 @@ export function PackageCard({ pkg, packageNumber }: { pkg: UmrahPackage; package
                 roomTypes: offered,
                 prices: amountFor,
                 infantPrice: pricing.infant,
+                childNoBedPrice: pricing.childNoBed,
               }}
             />
           </div>
@@ -332,7 +342,6 @@ function FlightLeg({
   bigTime,
   flightNo,
   date,
-  checkIn,
   alignEnd,
 }: {
   Icon: SvgIcon;
@@ -340,7 +349,6 @@ function FlightLeg({
   bigTime: string;
   flightNo: string;
   date: string;
-  checkIn?: string;
   alignEnd?: boolean;
 }) {
   return (
@@ -359,10 +367,7 @@ function FlightLeg({
       {flightNo && (
         <p className="mt-1 text-sm font-semibold text-on-surface">Flight {flightNo}</p>
       )}
-      <p className="mt-1 text-xs text-on-surface-variant">
-        {formatDate(date)}
-        {checkIn && formatClock(checkIn) ? ` · check-in ${formatClock(checkIn)}` : ""}
-      </p>
+      <p className="mt-1 text-xs text-on-surface-variant">{formatDate(date)}</p>
     </div>
   );
 }

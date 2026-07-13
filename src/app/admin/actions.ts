@@ -72,6 +72,7 @@ export interface PackageFormInput {
   priceTriple: number | null;
   priceDouble: number | null;
   priceInfant: number | null;
+  priceChildNoBed: number | null;
   seatsTotal: number;
   seatsAvailable: number;
   packageCode: string | null;
@@ -79,10 +80,10 @@ export interface PackageFormInput {
   flightRoute: string | null;
   flightOutboundNo: string | null;
   flightInboundNo: string | null;
-  flightOutboundTime: string | null;
-  flightInboundTime: string | null;
   flightDepartureTime: string | null;
   flightArrivalTime: string | null;
+  flightDepartureDate: string | null;
+  flightArrivalDate: string | null;
   featured: boolean;
 }
 
@@ -118,6 +119,7 @@ function toRow(input: PackageFormInput) {
     price_triple: priceTriple,
     price_double: priceDouble,
     price_infant: input.priceInfant,
+    price_child_no_bed: input.priceChildNoBed,
     price_pkr: fromPrice,
     seats_total: input.seatsTotal,
     seats_available: input.seatsAvailable,
@@ -126,10 +128,10 @@ function toRow(input: PackageFormInput) {
     flight_route: input.flightRoute,
     flight_outbound_no: input.flightOutboundNo,
     flight_inbound_no: input.flightInboundNo,
-    flight_outbound_time: input.flightOutboundTime,
-    flight_inbound_time: input.flightInboundTime,
     flight_departure_time: input.flightDepartureTime,
     flight_arrival_time: input.flightArrivalTime,
+    flight_departure_date: input.flightDepartureDate,
+    flight_arrival_date: input.flightArrivalDate,
     featured: input.featured,
   };
 }
@@ -142,8 +144,6 @@ function assertPackageValid(input: PackageFormInput) {
   const blocking = getBlockingFlightIssues({
     outboundNo: input.flightOutboundNo,
     inboundNo: input.flightInboundNo,
-    outboundTime: input.flightOutboundTime,
-    inboundTime: input.flightInboundTime,
     departureTime: input.flightDepartureTime,
     arrivalTime: input.flightArrivalTime,
   });
@@ -158,13 +158,16 @@ function revalidatePublicPages() {
   revalidatePath("/admin");
 }
 
+// Note: these deliberately do NOT call redirect() — they're awaited directly
+// (not via a <form action>) from PackageWizard's client-side try/catch, and
+// redirect() throws internally; catching that throw would show a fake error
+// on an otherwise-successful save. The wizard navigates itself on success.
 export async function createPackageAction(input: PackageFormInput) {
   assertPackageValid(input);
   const supabase = await createClient();
   const { error } = await supabase.from("packages").insert(toRow(input));
   if (error) throw new Error(error.message);
   revalidatePublicPages();
-  redirect("/admin/packages");
 }
 
 export async function updatePackageAction(id: string, input: PackageFormInput) {
@@ -173,7 +176,6 @@ export async function updatePackageAction(id: string, input: PackageFormInput) {
   const { error } = await supabase.from("packages").update(toRow(input)).eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePublicPages();
-  redirect("/admin/packages");
 }
 
 /** Persist a newly typed airline so it's reusable in future packages. Returns the clean name. */

@@ -50,6 +50,7 @@ export default async function EditPackagePage({
     priceTriple: row.price_triple,
     priceDouble: row.price_double,
     priceInfant: row.price_infant,
+    priceChildNoBed: row.price_child_no_bed,
     seatsTotal: row.seats_total,
     seatsAvailable: row.seats_available,
     packageCode: row.package_code,
@@ -58,10 +59,10 @@ export default async function EditPackagePage({
     flightOutboundNo: row.flight_outbound_no,
     flightInboundNo: row.flight_inbound_no,
     // Legacy free-text times are normalized to "HH:MM" so the time pickers show them.
-    flightOutboundTime: toTimeInputValue(row.flight_outbound_time) || null,
-    flightInboundTime: toTimeInputValue(row.flight_inbound_time) || null,
     flightDepartureTime: toTimeInputValue(row.flight_departure_time) || null,
     flightArrivalTime: toTimeInputValue(row.flight_arrival_time) || null,
+    flightDepartureDate: row.flight_departure_date,
+    flightArrivalDate: row.flight_arrival_date,
     featured: row.featured,
   };
 

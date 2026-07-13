@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
 import { clsx } from "@/lib/clsx";
 import { formatPkr } from "@/lib/format";
@@ -46,6 +47,7 @@ const emptyForm = (hotelOptions: HotelOption[], airlines: string[], cities: City
     priceTriple: null,
     priceDouble: null,
     priceInfant: 75000,
+    priceChildNoBed: null,
     seatsTotal: 40,
     seatsAvailable: 40,
     packageCode: null,
@@ -53,10 +55,10 @@ const emptyForm = (hotelOptions: HotelOption[], airlines: string[], cities: City
     flightRoute: code ? `${code} → JED → ${code}` : null,
     flightOutboundNo: null,
     flightInboundNo: null,
-    flightOutboundTime: null,
-    flightInboundTime: null,
     flightDepartureTime: null,
     flightArrivalTime: null,
+    flightDepartureDate: null,
+    flightArrivalDate: null,
     featured: false,
   };
 };
@@ -81,6 +83,7 @@ export function PackageWizard({
   packageId?: string;
   initialValues?: PackageFormInput;
 }) {
+  const router = useRouter();
   const [step, setStep] = useState(0);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -192,19 +195,10 @@ export function PackageWizard({
       getFlightIssues({
         outboundNo: form.flightOutboundNo,
         inboundNo: form.flightInboundNo,
-        outboundTime: form.flightOutboundTime,
-        inboundTime: form.flightInboundTime,
         departureTime: form.flightDepartureTime,
         arrivalTime: form.flightArrivalTime,
       }),
-    [
-      form.flightOutboundNo,
-      form.flightInboundNo,
-      form.flightOutboundTime,
-      form.flightInboundTime,
-      form.flightDepartureTime,
-      form.flightArrivalTime,
-    ],
+    [form.flightOutboundNo, form.flightInboundNo, form.flightDepartureTime, form.flightArrivalTime],
   );
   const blockingIssues = flightIssues.filter((i) => i.kind === "block");
   const overrideIssues = flightIssues.filter((i) => i.kind === "override");
@@ -265,6 +259,9 @@ export function PackageWizard({
         } else {
           await createPackageAction(form);
         }
+        // Navigate only after a clean (non-throwing) save — the actions
+        // themselves don't call redirect() (see the note in actions.ts).
+        router.push("/admin/packages");
       } catch (e) {
         setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
       }
@@ -569,6 +566,14 @@ export function PackageWizard({
                 </Field>
               </div>
               <div className="grid gap-5 sm:grid-cols-2">
+                <Field label="Departure date">
+                  <input
+                    type="date"
+                    value={form.flightDepartureDate ?? ""}
+                    onChange={(e) => set("flightDepartureDate", e.target.value || null)}
+                    className={inputClass}
+                  />
+                </Field>
                 <Field label="Departure time (from Pakistan)">
                   <input
                     type="time"
@@ -577,11 +582,11 @@ export function PackageWizard({
                     className={inputClass}
                   />
                 </Field>
-                <Field label="Outbound check-in time">
+                <Field label="Arrival date">
                   <input
-                    type="time"
-                    value={form.flightOutboundTime ?? ""}
-                    onChange={(e) => set("flightOutboundTime", e.target.value || null)}
+                    type="date"
+                    value={form.flightArrivalDate ?? ""}
+                    onChange={(e) => set("flightArrivalDate", e.target.value || null)}
                     className={inputClass}
                   />
                 </Field>
@@ -590,14 +595,6 @@ export function PackageWizard({
                     type="time"
                     value={form.flightArrivalTime ?? ""}
                     onChange={(e) => set("flightArrivalTime", e.target.value || null)}
-                    className={inputClass}
-                  />
-                </Field>
-                <Field label="Inbound check-in time">
-                  <input
-                    type="time"
-                    value={form.flightInboundTime ?? ""}
-                    onChange={(e) => set("flightInboundTime", e.target.value || null)}
                     className={inputClass}
                   />
                 </Field>
@@ -680,15 +677,28 @@ export function PackageWizard({
                 </div>
               )}
 
-              <Field label="Infant — per person (PKR, optional)">
-                <input
-                  type="number"
-                  min={0}
-                  value={form.priceInfant ?? ""}
-                  onChange={(e) => set("priceInfant", e.target.value ? Number(e.target.value) : null)}
-                  className={clsx(inputClass, "sm:max-w-xs")}
-                />
-              </Field>
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field label="Infant — per person (PKR, optional)">
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.priceInfant ?? ""}
+                    onChange={(e) => set("priceInfant", e.target.value ? Number(e.target.value) : null)}
+                    className={inputClass}
+                  />
+                </Field>
+                <Field label="Child without bed — per person (PKR, optional)">
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.priceChildNoBed ?? ""}
+                    onChange={(e) =>
+                      set("priceChildNoBed", e.target.value ? Number(e.target.value) : null)
+                    }
+                    className={inputClass}
+                  />
+                </Field>
+              </div>
 
               <div className="grid gap-5 sm:grid-cols-2">
                 <Field label="Total seats">

@@ -17,6 +17,7 @@ export interface BookingData {
   roomTypes: RoomType[];
   prices: Record<RoomType, number>;
   infantPrice: number;
+  childNoBedPrice: number;
 }
 
 interface Result {
@@ -71,6 +72,7 @@ function BookingModal({ booking, onClose }: { booking: BookingData; onClose: () 
   const [adults, setAdults] = useState(1);
   const [children, setChildren] = useState(0);
   const [infants, setInfants] = useState(0);
+  const [childNoBed, setChildNoBed] = useState(0);
   const [roomType, setRoomType] = useState<RoomType>(booking.roomTypes[0] ?? "Quad");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -92,7 +94,8 @@ function BookingModal({ booking, onClose }: { booking: BookingData; onClose: () 
 
   const unitPrice = booking.prices[roomType] ?? booking.fromPrice;
   const payingHeads = adults + children;
-  const estTotal = unitPrice * payingHeads + booking.infantPrice * infants;
+  const estTotal =
+    unitPrice * payingHeads + booking.infantPrice * infants + booking.childNoBedPrice * childNoBed;
 
   function confirm() {
     setError(null);
@@ -105,6 +108,7 @@ function BookingModal({ booking, onClose }: { booking: BookingData; onClose: () 
           adults,
           children,
           infants,
+          childNoBed,
           roomType,
         });
         setResult({ reference: res.reference, total: res.total });
@@ -150,6 +154,13 @@ function BookingModal({ booking, onClose }: { booking: BookingData; onClose: () 
               <Counter label="Adults" hint="12+ years" value={adults} min={1} onChange={setAdults} />
               <Counter label="Children" hint="2–11 years" value={children} min={0} onChange={setChildren} />
               <Counter label="Infants" hint="Under 2" value={infants} min={0} onChange={setInfants} />
+              <Counter
+                label="Child (No Bed)"
+                hint="Shares existing bed, no extra bed"
+                value={childNoBed}
+                min={0}
+                onChange={setChildNoBed}
+              />
 
               <label className="block">
                 <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
@@ -187,6 +198,7 @@ function BookingModal({ booking, onClose }: { booking: BookingData; onClose: () 
                 <p className="text-[0.7rem] text-on-surface-variant">
                   {payingHeads} × {formatPkr(unitPrice)}
                   {infants > 0 && ` + ${infants} infant`}
+                  {childNoBed > 0 && ` + ${childNoBed} child (no bed)`}
                 </p>
               </div>
               <p className="font-[var(--font-heading)] text-2xl tabular-nums text-secondary">

@@ -8,6 +8,7 @@ export interface CreateBookingInput {
   adults: number;
   children: number;
   infants: number;
+  childNoBed: number;
   roomType: string;
 }
 
@@ -39,7 +40,9 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
 
   const { data: pkg, error: pkgError } = await supabase
     .from("packages")
-    .select("price_sharing, price_quad, price_triple, price_double, price_infant, room_types, is_published")
+    .select(
+      "price_sharing, price_quad, price_triple, price_double, price_infant, price_child_no_bed, room_types, is_published",
+    )
     .eq("id", input.packageId)
     .single();
 
@@ -53,8 +56,12 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
 
   const unitPrice = Number(pkg[column] ?? 0);
   const infantPrice = Number(pkg.price_infant ?? 0);
+  const childNoBedPrice = Number(pkg.price_child_no_bed ?? 0);
   const payingHeads = Math.max(0, input.adults) + Math.max(0, input.children);
-  const total = unitPrice * payingHeads + infantPrice * Math.max(0, input.infants);
+  const total =
+    unitPrice * payingHeads +
+    infantPrice * Math.max(0, input.infants) +
+    childNoBedPrice * Math.max(0, input.childNoBed);
 
   const reference = makeReference();
   const { error } = await supabase.from("bookings").insert({
@@ -65,6 +72,7 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
     adults: input.adults,
     children: input.children,
     infants: input.infants,
+    child_no_bed: input.childNoBed,
     room_type: input.roomType,
     unit_price: unitPrice,
     total_pkr: total,

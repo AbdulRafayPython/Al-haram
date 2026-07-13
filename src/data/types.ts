@@ -7,10 +7,11 @@ export interface FlightItinerary {
   route: string; // "MUX → JED"
   outboundNo: string; // "SV-801"
   inboundNo: string; // "SV-800"
-  outboundTime: string; // scheduled outbound clock time, e.g. "4:45 PM"
-  inboundTime: string; // scheduled return clock time, e.g. "3:05 PM"
   departureTime: string; // leaves Pakistan, e.g. "7:30 PM"
   arrivalTime: string; // lands back, e.g. "8:30 AM"
+  /** Explicit leg dates set by the admin; fall back to the package's departure/return date when unset. */
+  departureDate?: string;
+  arrivalDate?: string;
 }
 
 /** The room-occupancy tiers a package can offer. */
@@ -25,6 +26,7 @@ export interface PriceTiers {
   triple: number;
   double: number;
   infant: number;
+  childNoBed: number;
 }
 
 export interface UmrahPackage {

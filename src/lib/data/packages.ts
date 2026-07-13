@@ -51,10 +51,10 @@ function toUmrahPackage(row: PackageRow, logoMap: Record<string, string> = {}): 
           route: row.flight_route,
           outboundNo: row.flight_outbound_no ?? "",
           inboundNo: row.flight_inbound_no ?? "",
-          outboundTime: row.flight_outbound_time ?? "",
-          inboundTime: row.flight_inbound_time ?? "",
           departureTime: row.flight_departure_time ?? "",
           arrivalTime: row.flight_arrival_time ?? "",
+          departureDate: row.flight_departure_date ?? undefined,
+          arrivalDate: row.flight_arrival_date ?? undefined,
         }
       : undefined,
     pricing: {
@@ -63,6 +63,7 @@ function toUmrahPackage(row: PackageRow, logoMap: Record<string, string> = {}): 
       triple: row.price_triple ?? row.price_pkr,
       double: row.price_double ?? row.price_pkr,
       infant: row.price_infant ?? 0,
+      childNoBed: row.price_child_no_bed ?? 0,
     },
   };
 }

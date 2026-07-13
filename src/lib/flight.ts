@@ -6,8 +6,6 @@
 export interface FlightFields {
   outboundNo: string | null;
   inboundNo: string | null;
-  outboundTime: string | null;
-  inboundTime: string | null;
   departureTime: string | null;
   arrivalTime: string | null;
 }
@@ -61,8 +59,6 @@ export function formatClock(value: string | null | undefined): string {
   return `${h}:${String(m).padStart(2, "0")} ${meridiem}`;
 }
 
-const MIN_GAP_MINUTES = 60;
-
 /** All rule violations for the given flight fields (missing fields are skipped). */
 export function getFlightIssues(f: FlightFields): FlightIssue[] {
   const issues: FlightIssue[] = [];
@@ -73,54 +69,6 @@ export function getFlightIssues(f: FlightFields): FlightIssue[] {
     issues.push({
       code: "same-flight-no",
       message: "Outbound and inbound flight numbers are the same.",
-      kind: "override",
-    });
-  }
-
-  const dep = parseTimeToMinutes(f.departureTime);
-  const ob = parseTimeToMinutes(f.outboundTime);
-  const arr = parseTimeToMinutes(f.arrivalTime);
-  const ib = parseTimeToMinutes(f.inboundTime);
-
-  // Outbound leg: departure vs check-in.
-  if (dep != null && ob != null) {
-    if (dep === ob) {
-      issues.push({
-        code: "outbound-equal",
-        message: "Departure time and outbound check-in time cannot be the same.",
-        kind: "block",
-      });
-    } else if (Math.abs(dep - ob) < MIN_GAP_MINUTES) {
-      issues.push({
-        code: "outbound-gap",
-        message: "Departure and outbound check-in times must be at least 1 hour apart.",
-        kind: "block",
-      });
-    }
-  }
-
-  // Inbound leg: arrival vs check-in.
-  if (arr != null && ib != null) {
-    if (arr === ib) {
-      issues.push({
-        code: "inbound-equal",
-        message: "Arrival time and inbound check-in time cannot be the same.",
-        kind: "block",
-      });
-    } else if (Math.abs(arr - ib) < MIN_GAP_MINUTES) {
-      issues.push({
-        code: "inbound-gap",
-        message: "Arrival and inbound check-in times must be at least 1 hour apart.",
-        kind: "block",
-      });
-    }
-  }
-
-  // Cross-leg identical check-in times — usually a copy/paste slip.
-  if (ob != null && ib != null && ob === ib) {
-    issues.push({
-      code: "times-equal",
-      message: "Outbound and inbound check-in times are identical — double-check.",
       kind: "override",
     });
   }
