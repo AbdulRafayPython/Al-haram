@@ -75,12 +75,25 @@ export default function ContactPage() {
                 <Detail icon="call" label="Phone" value={site.phone} href={site.phoneHref} />
               </ul>
             </div>
-            <div className="flex aspect-video items-center justify-center rounded-2xl border border-outline-variant/40 bg-gradient-to-br from-primary to-primary-container text-on-primary">
-              <div className="text-center">
-                <Icon name="map" className="text-5xl text-secondary-fixed" />
-                <p className="mt-2 text-sm text-on-primary/70">Bahadurabad, Karachi</p>
-              </div>
+            <div className="overflow-hidden rounded-2xl border border-outline-variant/40">
+              <iframe
+                title={`Map to ${site.name} — ${site.address}`}
+                src={`https://maps.google.com/maps?q=${encodeURIComponent(site.address)}&z=15&output=embed`}
+                className="aspect-video w-full"
+                style={{ border: 0 }}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+              />
             </div>
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(site.address)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-secondary hover:underline"
+            >
+              <Icon name="directions" className="text-base" /> Get directions
+            </a>
           </aside>
         </Container>
       </section>

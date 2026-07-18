@@ -39,6 +39,7 @@ function toUmrahPackage(row: PackageRow, logoMap: Record<string, string> = {}): 
     seatsTotal: row.seats_total,
     seatsAvailable: row.seats_available,
     featured: row.featured,
+    baggage: row.baggage,
     returnDate: addDays(row.departure_date, row.duration_days),
     makkahNights: row.makkah_nights,
     madinahNights: row.madinah_nights,

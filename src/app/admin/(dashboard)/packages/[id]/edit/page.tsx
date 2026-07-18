@@ -63,6 +63,7 @@ export default async function EditPackagePage({
     flightArrivalTime: toTimeInputValue(row.flight_arrival_time) || null,
     flightDepartureDate: row.flight_departure_date,
     flightArrivalDate: row.flight_arrival_date,
+    baggage: row.baggage,
     featured: row.featured,
   };
 

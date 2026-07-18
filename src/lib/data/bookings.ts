@@ -6,8 +6,8 @@ export interface CreateBookingInput {
   name: string;
   phone: string;
   adults: number;
-  children: number;
   infants: number;
+  /** Children sharing an existing bed (no extra bed). The only child category. */
   childNoBed: number;
   roomType: string;
 }
@@ -57,22 +57,26 @@ export async function createBooking(input: CreateBookingInput): Promise<BookingR
   const unitPrice = Number(pkg[column] ?? 0);
   const infantPrice = Number(pkg.price_infant ?? 0);
   const childNoBedPrice = Number(pkg.price_child_no_bed ?? 0);
-  const payingHeads = Math.max(0, input.adults) + Math.max(0, input.children);
-  const total =
-    unitPrice * payingHeads +
-    infantPrice * Math.max(0, input.infants) +
-    childNoBedPrice * Math.max(0, input.childNoBed);
+  // Only adults are charged the room per-person price. A child without a bed is
+  // charged the child-no-bed price; infants the infant price.
+  const adults = Math.max(0, input.adults);
+  const infants = Math.max(0, input.infants);
+  const childNoBed = Math.max(0, input.childNoBed);
+  const total = unitPrice * adults + childNoBedPrice * childNoBed + infantPrice * infants;
+
+  const name = input.name.trim();
+  const phone = input.phone.trim();
 
   const reference = makeReference();
   const { error } = await supabase.from("bookings").insert({
     package_id: input.packageId,
     reference,
-    name: input.name.trim() || null,
-    phone: input.phone.trim() || null,
-    adults: input.adults,
-    children: input.children,
-    infants: input.infants,
-    child_no_bed: input.childNoBed,
+    name,
+    phone,
+    adults,
+    children: 0, // Legacy column, kept for historical bookings; no longer collected.
+    infants,
+    child_no_bed: childNoBed,
     room_type: input.roomType,
     unit_price: unitPrice,
     total_pkr: total,

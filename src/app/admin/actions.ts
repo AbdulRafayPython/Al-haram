@@ -6,6 +6,10 @@ import sharp from "sharp";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getBlockingFlightIssues } from "@/lib/flight";
+import {
+  parseAndValidatePackageJson,
+  type ImportContext,
+} from "@/lib/importPackage";
 
 /**
  * Verifies the current session belongs to an admin before any service-role
@@ -84,6 +88,7 @@ export interface PackageFormInput {
   flightArrivalTime: string | null;
   flightDepartureDate: string | null;
   flightArrivalDate: string | null;
+  baggage: string | null;
   featured: boolean;
 }
 
@@ -132,6 +137,7 @@ function toRow(input: PackageFormInput) {
     flight_arrival_time: input.flightArrivalTime,
     flight_departure_date: input.flightDepartureDate,
     flight_arrival_date: input.flightArrivalDate,
+    baggage: input.baggage?.trim() ? input.baggage.trim() : null,
     featured: input.featured,
   };
 }
@@ -176,6 +182,93 @@ export async function updatePackageAction(id: string, input: PackageFormInput) {
   const { error } = await supabase.from("packages").update(toRow(input)).eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePublicPages();
+}
+
+// --- Import a package from pasted JSON --------------------------------------
+
+export interface ImportActionResult {
+  ok: boolean;
+  errors: string[];
+  warnings: string[];
+  preview?: {
+    input: PackageFormInput;
+    makkahHotelName: string;
+    madinahHotelName: string;
+  };
+  created?: { id: string; title: string };
+}
+
+/** Load the real cities/airlines/hotels the pasted JSON is validated against. */
+async function buildImportContext(): Promise<{
+  ctx: ImportContext;
+  hotelName: Map<string, string>;
+}> {
+  const supabase = await createClient();
+  const [cities, airlines, hotels] = await Promise.all([
+    supabase.from("cities").select("code, name").eq("is_active", true),
+    supabase.from("airlines").select("name").eq("is_active", true),
+    supabase.from("hotels").select("id, name, city"),
+  ]);
+  if (cities.error) throw new Error(cities.error.message);
+  if (airlines.error) throw new Error(airlines.error.message);
+  if (hotels.error) throw new Error(hotels.error.message);
+
+  const hotelName = new Map((hotels.data ?? []).map((h) => [h.id, h.name]));
+  return {
+    ctx: {
+      cities: cities.data ?? [],
+      airlines: (airlines.data ?? []).map((a) => a.name),
+      hotels: hotels.data ?? [],
+    },
+    hotelName,
+  };
+}
+
+/** Validate pasted JSON and return a preview — does NOT write anything. */
+export async function previewPackageImport(raw: string): Promise<ImportActionResult> {
+  const { ctx, hotelName } = await buildImportContext();
+  const result = parseAndValidatePackageJson(raw, ctx);
+  if (!result.ok || !result.value) {
+    return { ok: false, errors: result.errors, warnings: result.warnings };
+  }
+  return {
+    ok: true,
+    errors: [],
+    warnings: result.warnings,
+    preview: {
+      input: result.value,
+      makkahHotelName: hotelName.get(result.value.makkahHotelId ?? "") ?? "—",
+      madinahHotelName: hotelName.get(result.value.madinahHotelId ?? "") ?? "—",
+    },
+  };
+}
+
+/**
+ * Re-validate the pasted JSON server-side (never trust the client's preview)
+ * and create the package on success.
+ */
+export async function importPackageAction(raw: string): Promise<ImportActionResult> {
+  const { ctx } = await buildImportContext();
+  const result = parseAndValidatePackageJson(raw, ctx);
+  if (!result.ok || !result.value) {
+    return { ok: false, errors: result.errors, warnings: result.warnings };
+  }
+
+  assertPackageValid(result.value);
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("packages")
+    .insert(toRow(result.value))
+    .select("id, title")
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePublicPages();
+  return {
+    ok: true,
+    errors: [],
+    warnings: result.warnings,
+    created: { id: data.id, title: data.title },
+  };
 }
 
 /** Persist a newly typed airline so it's reusable in future packages. Returns the clean name. */

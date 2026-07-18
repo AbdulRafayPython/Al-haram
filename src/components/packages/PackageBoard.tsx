@@ -39,8 +39,9 @@ function buildNumbering(packages: UmrahPackage[]): Map<string, number> {
 /**
  * Progressive package finder. The filters cascade — City → Airline → Package →
  * Date — each staying locked until the previous is chosen, only ever offering
- * options that still have available packages. The Package step lists each
- * departure by its duration (days).
+ * options that still have available packages. The Package step is a *class*
+ * grouped by duration (e.g. "20 Days Package") rather than one entry per dated
+ * departure; the specific date is then chosen from the calendar.
  */
 export function PackageBoard({
   packages,
@@ -59,7 +60,8 @@ export function PackageBoard({
 
   const [city, setCity] = useState<string | null>(null);
   const [airline, setAirline] = useState<string | null>(null);
-  const [packageId, setPackageId] = useState<string | null>(null);
+  // "Package" is now a duration class (e.g. "20" → "20 Days Package"), or ALL.
+  const [durationClass, setDurationClass] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [highlight, setHighlight] = useState(false);
 
@@ -67,6 +69,8 @@ export function PackageBoard({
   const calendarRef = useRef<HTMLDivElement>(null);
 
   const matchesAirline = (p: UmrahPackage) => airline === ALL || p.airline === airline;
+  const matchesClass = (p: UmrahPackage) =>
+    durationClass === ALL || String(p.durationDays) === durationClass;
 
   // --- Cascading option lists (each narrows the next) --------------------
   const cityOptions = useMemo(() => {
@@ -82,79 +86,76 @@ export function PackageBoard({
     return airlines.filter((a) => set.has(a));
   }, [availablePackages, city, airlines]);
 
-  const packageOptions = useMemo(() => {
+  // Distinct duration classes for the current city + airline, ascending.
+  const classOptions = useMemo(() => {
     if (!city || !airline) return [];
-    return availablePackages
-      .filter((p) => p.departureCityCode === city && matchesAirline(p))
-      .sort((a, b) => +new Date(a.departureDate) - +new Date(b.departureDate));
+    const set = new Set(
+      availablePackages
+        .filter((p) => p.departureCityCode === city && matchesAirline(p))
+        .map((p) => p.durationDays),
+    );
+    return Array.from(set).sort((a, b) => a - b);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [availablePackages, city, airline]);
 
-  // The calendar shows the whole route's upcoming departures (city + airline).
+  // The calendar shows the chosen class's upcoming departures (city + airline + class).
   const routePackages = useMemo(
     () =>
-      city && airline
-        ? availablePackages.filter((p) => p.departureCityCode === city && matchesAirline(p))
+      city && airline && durationClass
+        ? availablePackages.filter(
+            (p) => p.departureCityCode === city && matchesAirline(p) && matchesClass(p),
+          )
         : [],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [availablePackages, city, airline],
+    [availablePackages, city, airline, durationClass],
   );
 
   // Numbering is per departure date across the current route set.
   const numbering = useMemo(() => buildNumbering(routePackages), [routePackages]);
 
   const results = useMemo(() => {
-    if (!city || !airline || !selectedDate) return [];
+    if (!city || !airline || !durationClass || !selectedDate) return [];
     return availablePackages
       .filter(
         (p) =>
-          p.departureCityCode === city && matchesAirline(p) && p.departureDate === selectedDate,
+          p.departureCityCode === city &&
+          matchesAirline(p) &&
+          matchesClass(p) &&
+          p.departureDate === selectedDate,
       )
       .sort((a, b) => (numbering.get(a.id) ?? 0) - (numbering.get(b.id) ?? 0));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [availablePackages, city, airline, selectedDate, numbering]);
+  }, [availablePackages, city, airline, durationClass, selectedDate, numbering]);
 
   // --- Cascading resets: changing a step clears everything downstream ----
   const onCityChange = (v: string) => {
     setCity(v);
     setAirline(null);
-    setPackageId(null);
+    setDurationClass(null);
     setSelectedDate(null);
   };
   const onAirlineChange = (v: string) => {
     setAirline(v);
-    setPackageId(null);
+    setDurationClass(null);
     setSelectedDate(null);
   };
-  const onPackageChange = (v: string) => {
-    setPackageId(v);
-    if (v === ALL) {
-      setSelectedDate(null);
-      return;
-    }
-    const pkg = availablePackages.find((p) => p.id === v);
-    setSelectedDate(pkg ? pkg.departureDate : null);
+  const onClassChange = (v: string) => {
+    // Selecting a package class reveals the calendar; the date is picked there.
+    setDurationClass(v);
+    setSelectedDate(null);
   };
   const handleSelectDate = (date: string) => {
-    if (selectedDate === date) {
-      setSelectedDate(null);
-      return;
-    }
-    setSelectedDate(date);
-    if (packageId !== ALL) {
-      const pkg = routePackages.find((p) => p.departureDate === date);
-      if (pkg) setPackageId(pkg.id);
-    }
+    setSelectedDate((cur) => (cur === date ? null : date));
   };
   const reset = () => {
     setCity(null);
     setAirline(null);
-    setPackageId(null);
+    setDurationClass(null);
     setSelectedDate(null);
   };
 
   useEffect(() => {
-    if (!packageId || selectedDate || !calendarRef.current) return;
+    if (!durationClass || selectedDate || !calendarRef.current) return;
     const reduceMotion =
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -162,7 +163,7 @@ export function PackageBoard({
       behavior: reduceMotion ? "auto" : "smooth",
       block: "start",
     });
-  }, [packageId, selectedDate]);
+  }, [durationClass, selectedDate]);
 
   useEffect(() => {
     if (!results.length || !resultsRef.current) return;
@@ -174,14 +175,12 @@ export function PackageBoard({
     const raf = requestAnimationFrame(() => {
       const el = resultsRef.current;
       if (!el) return;
+      // Always land on the TOP of the results (the first package), not the
+      // bottom — a tall result set must never scroll past to the last card.
       const navOffset = 80;
-      const bottomGap = 24;
       const rect = el.getBoundingClientRect();
-      const vh = window.innerHeight;
       const absTop = window.scrollY + rect.top;
-      const fits = rect.height <= vh - navOffset - bottomGap;
-      const target = fits ? absTop - navOffset : absTop + rect.height - vh + bottomGap;
-      window.scrollTo({ top: Math.max(0, target), behavior });
+      window.scrollTo({ top: Math.max(0, absTop - navOffset), behavior });
     });
 
     setHighlight(true);
@@ -196,7 +195,7 @@ export function PackageBoard({
     ? "Select your departure city to begin."
     : !airline
       ? "Now choose your airline."
-      : !packageId
+      : !durationClass
         ? "Select a package to continue."
         : !selectedDate
           ? "Almost there — pick your departure date from the calendar above."
@@ -229,11 +228,11 @@ export function PackageBoard({
           </Field>
 
           <Field label="3 · Package" muted={!airline}>
-            <Select value={packageId} onChange={onPackageChange} placeholder="Select Package" disabled={!airline}>
-              {packageOptions.length > 1 && <option value={ALL}>All Packages</option>}
-              {packageOptions.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.durationDays} Days · {formatDate(p.departureDate)}
+            <Select value={durationClass} onChange={onClassChange} placeholder="Select Package" disabled={!airline}>
+              {classOptions.length > 1 && <option value={ALL}>All Packages</option>}
+              {classOptions.map((d) => (
+                <option key={d} value={String(d)}>
+                  {d} Days Package
                 </option>
               ))}
             </Select>
@@ -251,8 +250,8 @@ export function PackageBoard({
           </div>
         )}
 
-        {/* Calendar appears once a package is chosen */}
-        {packageId && (
+        {/* Calendar appears once a package class is chosen */}
+        {durationClass && (
           <div ref={calendarRef} className="mt-5 scroll-mt-24 border-t border-outline-variant/40 pt-5">
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div>

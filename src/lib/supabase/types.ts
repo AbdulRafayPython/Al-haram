@@ -206,6 +206,7 @@ export type Database = {
       packages: {
         Row: {
           airline: string
+          baggage: string | null
           created_at: string
           departure_city: string
           departure_city_code: string
@@ -243,6 +244,7 @@ export type Database = {
         }
         Insert: {
           airline: string
+          baggage?: string | null
           created_at?: string
           departure_city: string
           departure_city_code: string
@@ -280,6 +282,7 @@ export type Database = {
         }
         Update: {
           airline?: string
+          baggage?: string | null
           created_at?: string
           departure_city?: string
           departure_city_code?: string

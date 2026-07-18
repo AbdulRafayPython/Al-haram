@@ -10,6 +10,7 @@ import { ROOM_TYPES, type RoomType, type UmrahPackage } from "@/data/types";
 import {
   AccommodationIcon,
   CalendarIcon,
+  LuggageIcon,
   MapPinIcon,
   MoonIcon,
   PlaneLandingIcon,
@@ -118,6 +119,12 @@ export function PackageCard({ pkg, packageNumber }: { pkg: UmrahPackage; package
               <MoonIcon className="h-4 w-4 text-secondary-fixed" />
               {pkg.durationDays} Nights
             </span>
+            {pkg.baggage?.trim() && (
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-on-primary/10 px-3 py-1.5 text-sm font-medium backdrop-blur-sm">
+                <LuggageIcon className="h-4 w-4 text-secondary-fixed" />
+                Baggage Size: {pkg.baggage.trim()}
+              </span>
+            )}
             <span
               className={clsx(
                 "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-wider ring-1",

@@ -8,7 +8,7 @@ import { getHotels, getHotelStats } from "@/lib/data/hotels";
 export const metadata: Metadata = {
   title: "Makkah & Madinah Hotels",
   description:
-    "Browse Saudi hotels in Makkah and Madinah by distance from Haram, room type, and nightly rate in SAR.",
+    "Browse Saudi hotels in Makkah and Madinah by distance from the Haram and location.",
 };
 
 export default async function SaudiHotelsPage() {
@@ -27,7 +27,7 @@ export default async function SaudiHotelsPage() {
       <PageHeader
         eyebrow="Hotel Directory"
         title="Makkah & Madinah Hotels"
-        description="Compare hotels near the Haramain by distance, room configuration, and nightly rate. All rates shown in SAR."
+        description="Compare hotels near the Haramain by distance from the Haram and location."
         icon="hotel"
         image="/images/makkah-skyline.jpg"
       />

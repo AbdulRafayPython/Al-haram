@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
-import { formatSar } from "@/lib/format";
 import { deleteHotelAction } from "@/app/admin/actions";
 import { HotelImageForm } from "./HotelImageForm";
 import { HotelFormModal } from "./HotelFormModal";
@@ -114,12 +113,10 @@ export function HotelsAdmin({ hotels }: { hotels: Hotel[] }) {
                   </div>
                 </div>
 
-                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-[0.7rem] text-on-surface-variant">
-                  <span>Quad {formatSar(hotel.rates.quad)}</span>
-                  <span>Triple {formatSar(hotel.rates.triple)}</span>
-                  <span>Double {formatSar(hotel.rates.double)}</span>
-                  {hotel.rates.sharing != null && <span>Sharing {formatSar(hotel.rates.sharing)}</span>}
-                </div>
+                <p className="mt-2 flex items-center gap-1.5 text-[0.7rem] text-on-surface-variant">
+                  <Icon name="near_me" className="text-sm text-secondary" />
+                  {hotel.distance}
+                </p>
 
                 {deleteError?.id === hotel.id && (
                   <p className="mt-2 text-xs text-error">{deleteError.message}</p>

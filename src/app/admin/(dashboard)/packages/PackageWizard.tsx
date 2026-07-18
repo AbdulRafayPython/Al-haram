@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
 import { clsx } from "@/lib/clsx";
@@ -59,6 +59,7 @@ const emptyForm = (hotelOptions: HotelOption[], airlines: string[], cities: City
     flightArrivalTime: null,
     flightDepartureDate: null,
     flightArrivalDate: null,
+    baggage: null,
     featured: false,
   };
 };
@@ -90,6 +91,34 @@ export function PackageWizard({
   const [form, setForm] = useState<PackageFormInput>(
     initialValues ?? emptyForm(hotelOptions, airlines, cities),
   );
+
+  // Baggage is optional — the checkbox reveals the text field, and starts on
+  // when editing a package that already has a baggage allowance set.
+  const [showBaggage, setShowBaggage] = useState<boolean>(() => Boolean(initialValues?.baggage));
+
+  // When a step changes, move focus to the first empty field of the new step
+  // (instead of the browser jumping to the top of the page / URL bar).
+  const stepContentRef = useRef<HTMLDivElement>(null);
+  const isFirstStepRender = useRef(true);
+  useEffect(() => {
+    if (isFirstStepRender.current) {
+      isFirstStepRender.current = false;
+      return;
+    }
+    const container = stepContentRef.current;
+    if (!container) return;
+    const controls = Array.from(
+      container.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+        "input, select, textarea",
+      ),
+    ).filter(
+      (el) => !el.disabled && el.type !== "hidden" && el.type !== "checkbox" && el.offsetParent !== null,
+    );
+    const target = controls.find((el) => !el.value?.trim()) ?? controls[0];
+    if (!target) return;
+    target.focus({ preventScroll: true });
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [step]);
 
   // Airlines are DB-backed; keep a local copy so a freshly-added one shows immediately.
   const [airlineList, setAirlineList] = useState<string[]>(() =>
@@ -311,7 +340,7 @@ export function PackageWizard({
       )}
 
       {/* Step content */}
-      <div className="min-h-[320px]">
+      <div ref={stepContentRef} className="min-h-[320px]">
         {step === 0 && (
           <StepShell title="Route & Airline" subtitle="The basics of this departure.">
             <div className="space-y-5">
@@ -600,6 +629,35 @@ export function PackageWizard({
                 </Field>
               </div>
 
+              {/* Baggage allowance (optional, free text). Shown on the card only when set. */}
+              <div className="rounded-lg border border-outline-variant/40 bg-surface-container-low p-4">
+                <label className="flex items-center gap-2.5 text-sm text-on-surface">
+                  <input
+                    type="checkbox"
+                    checked={showBaggage}
+                    onChange={(e) => {
+                      setShowBaggage(e.target.checked);
+                      if (!e.target.checked) set("baggage", null);
+                    }}
+                    className="h-4 w-4 accent-secondary"
+                  />
+                  Add baggage allowance
+                </label>
+                {showBaggage && (
+                  <div className="mt-3">
+                    <Field label="Baggage size">
+                      <input
+                        value={form.baggage ?? ""}
+                        onChange={(e) => set("baggage", e.target.value || null)}
+                        placeholder="e.g. 30KG"
+                        maxLength={40}
+                        className={inputClass}
+                      />
+                    </Field>
+                  </div>
+                )}
+              </div>
+
               {blockingIssues.length > 0 && (
                 <div className="space-y-1.5 rounded-lg border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">
                   {blockingIssues.map((issue) => (
@@ -766,6 +824,7 @@ export function PackageWizard({
                   <SummaryItem label="Room types" value={form.roomTypes.join(", ") || "—"} />
                   <SummaryItem label="From price" value={formatPkr(fromPrice)} />
                   <SummaryItem label="Seats" value={`${form.seatsAvailable}/${form.seatsTotal}`} />
+                  <SummaryItem label="Baggage" value={form.baggage?.trim() || "—"} />
                   <SummaryItem label="Featured" value={form.featured ? "Yes" : "No"} />
                 </dl>
               </div>

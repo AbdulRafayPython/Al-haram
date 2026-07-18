@@ -47,6 +47,8 @@ export interface UmrahPackage {
   seatsTotal: number;
   seatsAvailable: number;
   featured?: boolean;
+  /** Optional baggage allowance as free text (e.g. "30KG"); shown on the card only when set. */
+  baggage?: string | null;
 
   // --- Enriched detail (populated in data/packages.ts) ------------------
   returnDate?: string; // ISO — departureDate + durationDays

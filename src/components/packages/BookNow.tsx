@@ -70,9 +70,8 @@ export function BookNow({
 
 function BookingModal({ booking, onClose }: { booking: BookingData; onClose: () => void }) {
   const [adults, setAdults] = useState(1);
-  const [children, setChildren] = useState(0);
-  const [infants, setInfants] = useState(0);
   const [childNoBed, setChildNoBed] = useState(0);
+  const [infants, setInfants] = useState(0);
   const [roomType, setRoomType] = useState<RoomType>(booking.roomTypes[0] ?? "Quad");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -93,9 +92,12 @@ function BookingModal({ booking, onClose }: { booking: BookingData; onClose: () 
   }, [onClose]);
 
   const unitPrice = booking.prices[roomType] ?? booking.fromPrice;
-  const payingHeads = adults + children;
+  // Only adults pay the room per-person price; a child without a bed is charged
+  // the (cheaper) child-no-bed price; infants the infant price.
   const estTotal =
-    unitPrice * payingHeads + booking.infantPrice * infants + booking.childNoBedPrice * childNoBed;
+    unitPrice * adults + booking.childNoBedPrice * childNoBed + booking.infantPrice * infants;
+  // Name and phone are mandatory — the confirm button stays inactive without them.
+  const canConfirm = adults >= 1 && Boolean(name.trim()) && Boolean(phone.trim());
 
   function confirm() {
     setError(null);
@@ -106,7 +108,6 @@ function BookingModal({ booking, onClose }: { booking: BookingData; onClose: () 
           name,
           phone,
           adults,
-          children,
           infants,
           childNoBed,
           roomType,
@@ -151,16 +152,9 @@ function BookingModal({ booking, onClose }: { booking: BookingData; onClose: () 
             </h3>
 
             <div className="mt-5 space-y-4">
-              <Counter label="Adults" hint="12+ years" value={adults} min={1} onChange={setAdults} />
-              <Counter label="Children" hint="2–11 years" value={children} min={0} onChange={setChildren} />
+              <Counter label="Adults" value={adults} min={1} onChange={setAdults} />
+              <Counter label="Child (No Bed)" value={childNoBed} min={0} onChange={setChildNoBed} />
               <Counter label="Infants" hint="Under 2" value={infants} min={0} onChange={setInfants} />
-              <Counter
-                label="Child (No Bed)"
-                hint="Shares existing bed, no extra bed"
-                value={childNoBed}
-                min={0}
-                onChange={setChildNoBed}
-              />
 
               <label className="block">
                 <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
@@ -186,9 +180,15 @@ function BookingModal({ booking, onClose }: { booking: BookingData; onClose: () 
               </label>
 
               <div className="grid grid-cols-2 gap-3">
-                <Input label="Full name" value={name} onChange={setName} placeholder="Your name" />
-                <Input label="Phone" value={phone} onChange={setPhone} placeholder="03xx-xxxxxxx" />
+                <Input label="Full name" value={name} onChange={setName} placeholder="Your name" required />
+                <Input label="Phone" value={phone} onChange={setPhone} placeholder="03xx-xxxxxxx" required />
               </div>
+              {!canConfirm && (
+                <p className="flex items-center gap-1.5 text-xs text-on-surface-variant">
+                  <Icon name="info" className="text-sm" />
+                  Enter your name and phone number to continue.
+                </p>
+              )}
             </div>
 
             {/* Live total */}
@@ -196,9 +196,9 @@ function BookingModal({ booking, onClose }: { booking: BookingData; onClose: () 
               <div>
                 <p className="text-[0.7rem] uppercase tracking-wider text-on-surface-variant">Total amount</p>
                 <p className="text-[0.7rem] text-on-surface-variant">
-                  {payingHeads} × {formatPkr(unitPrice)}
-                  {infants > 0 && ` + ${infants} infant`}
+                  {adults} × {formatPkr(unitPrice)}
                   {childNoBed > 0 && ` + ${childNoBed} child (no bed)`}
+                  {infants > 0 && ` + ${infants} infant`}
                 </p>
               </div>
               <p className="font-[var(--font-heading)] text-2xl tabular-nums text-secondary">
@@ -216,7 +216,7 @@ function BookingModal({ booking, onClose }: { booking: BookingData; onClose: () 
             <button
               type="button"
               onClick={confirm}
-              disabled={pending || adults < 1}
+              disabled={pending || !canConfirm}
               className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-secondary-fixed px-6 py-3 text-sm font-semibold uppercase tracking-widest text-on-secondary-fixed transition-all hover:brightness-105 disabled:opacity-60"
             >
               {pending ? (
@@ -294,7 +294,7 @@ function Counter({
   onChange,
 }: {
   label: string;
-  hint: string;
+  hint?: string;
   value: number;
   min: number;
   onChange: (v: number) => void;
@@ -303,7 +303,7 @@ function Counter({
     <div className="flex items-center justify-between">
       <div>
         <p className="text-sm font-medium text-on-surface">{label}</p>
-        <p className="text-[0.7rem] text-on-surface-variant">{hint}</p>
+        {hint && <p className="text-[0.7rem] text-on-surface-variant">{hint}</p>}
       </div>
       <div className="flex items-center gap-3">
         <button
@@ -334,16 +334,19 @@ function Input({
   value,
   onChange,
   placeholder,
+  required,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  required?: boolean;
 }) {
   return (
     <label className="block">
       <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
         {label}
+        {required && <span className="ml-0.5 text-error">*</span>}
       </span>
       <input
         value={value}

@@ -24,9 +24,14 @@ export default async function AdminPackagesPage() {
             {packages.length} package{packages.length === 1 ? "" : "s"} in the system.
           </p>
         </div>
-        <Button href="/admin/packages/new" variant="gold">
-          <Icon name="add" className="text-base" /> Add Package
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button href="/admin/packages/import" variant="secondary">
+            <Icon name="data_object" className="text-base" /> Import JSON
+          </Button>
+          <Button href="/admin/packages/new" variant="gold">
+            <Icon name="add" className="text-base" /> Add Package
+          </Button>
+        </div>
       </div>
 
       <div className="mt-6 overflow-hidden rounded-xl border border-outline-variant/40 bg-surface-container-lowest">

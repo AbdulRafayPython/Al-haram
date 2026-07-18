@@ -47,16 +47,17 @@ export function toTimeInputValue(value: string | null | undefined): string {
   return `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
 }
 
-/** Format a stored time ("HH:MM" or legacy "h:mm AM") for display, e.g. "5:15 AM". */
+/**
+ * Format a stored time ("HH:MM" or legacy "h:mm AM/PM") for display on a
+ * 24-hour clock, e.g. "05:15" or "19:20". Legacy 12-hour values are parsed and
+ * converted so old records display consistently.
+ */
 export function formatClock(value: string | null | undefined): string {
   const mins = parseTimeToMinutes(value);
   if (mins == null) return value?.trim() ?? "";
-  let h = Math.floor(mins / 60);
+  const h = Math.floor(mins / 60);
   const m = mins % 60;
-  const meridiem = h >= 12 ? "PM" : "AM";
-  h = h % 12;
-  if (h === 0) h = 12;
-  return `${h}:${String(m).padStart(2, "0")} ${meridiem}`;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
 /** All rule violations for the given flight fields (missing fields are skipped). */
