@@ -12,8 +12,8 @@ import {
   createCityAction,
   createPackageAction,
   updatePackageAction,
-  type PackageFormInput,
 } from "@/app/admin/actions";
+import type { PackageFormInput } from "@/lib/packageRow";
 import type { HotelOption } from "@/lib/data/packages";
 import type { CityOption } from "@/lib/data/cities";
 

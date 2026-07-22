@@ -5,7 +5,7 @@ import { getAirlines } from "@/lib/data/airlines";
 import { getCities } from "@/lib/data/cities";
 import { toTimeInputValue } from "@/lib/flight";
 import { PackageWizard } from "../../PackageWizard";
-import type { PackageFormInput } from "@/app/admin/actions";
+import type { PackageFormInput } from "@/lib/packageRow";
 
 export const metadata: Metadata = {
   title: "Edit Package",

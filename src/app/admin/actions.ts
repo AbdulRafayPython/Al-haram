@@ -15,10 +15,6 @@ import {
   type ImportContext,
 } from "@/lib/importPackage";
 
-// Re-exported so existing importers (`PackageWizard`, `importPackage`, edit page)
-// keep resolving it from here; the definition now lives in `@/lib/packageRow`.
-export type { PackageFormInput };
-
 /**
  * Verifies the current session belongs to an admin before any service-role
  * (RLS-bypassing) operation runs. See src/lib/supabase/admin.ts for why.

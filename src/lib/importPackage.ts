@@ -15,7 +15,7 @@
  */
 import { ROOM_TYPES, type RoomType } from "@/data/types";
 import { getBlockingFlightIssues, getFlightIssues, toTimeInputValue } from "@/lib/flight";
-import type { PackageFormInput } from "@/app/admin/actions";
+import type { PackageFormInput } from "@/lib/packageRow";
 
 /** Real records the validator resolves names/codes against (loaded server-side). */
 export interface ImportContext {
