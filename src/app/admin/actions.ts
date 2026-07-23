@@ -14,6 +14,8 @@ import {
   parseAndValidatePackageJson,
   type ImportContext,
 } from "@/lib/importPackage";
+import { extractPackageDraft } from "@/lib/scrapePackage";
+import { fetchPage } from "@/lib/scrapeFetch";
 
 /**
  * Verifies the current session belongs to an admin before any service-role
@@ -174,6 +176,60 @@ export async function importPackageAction(raw: string): Promise<ImportActionResu
     warnings: result.warnings,
     created: { id: data.id, title: data.title },
   };
+}
+
+// --- Scrape a package from a public URL -------------------------------------
+
+export interface ScrapeActionResult {
+  ok: boolean;
+  /** Draft JSON (PACKAGE_JSON_SAMPLE shape) to load into the import editor. */
+  json?: string;
+  /** Fields the extractor managed to fill. */
+  found: string[];
+  /** Required fields still blank — the admin must complete these. */
+  missing: string[];
+  /** Low-confidence guesses to double-check. */
+  warnings: string[];
+  /** The final (post-redirect) URL that was read. */
+  sourceUrl?: string;
+  /** Set when the fetch/scrape itself failed. */
+  error?: string;
+}
+
+/**
+ * Fetch a public page and run the deterministic extractor. This only produces a
+ * *draft* — nothing is written. The draft is handed to the same editor and
+ * validate → preview → create pipeline as the manual JSON import, so the admin
+ * reviews and fixes it before `importPackageAction` re-validates and inserts.
+ *
+ * Admin-gated (this fetches an arbitrary external URL), even though the /admin
+ * route is already proxy-protected.
+ */
+export async function scrapePackageAction(url: string): Promise<ScrapeActionResult> {
+  await assertAdmin();
+  const clean = (url ?? "").trim();
+  if (!clean) return { ok: false, found: [], missing: [], warnings: [], error: "Paste a package page URL first." };
+
+  try {
+    const [{ html, finalUrl }, { ctx }] = await Promise.all([fetchPage(clean), buildImportContext()]);
+    const draft = extractPackageDraft(html, finalUrl, ctx);
+    return {
+      ok: true,
+      json: draft.json,
+      found: draft.found,
+      missing: draft.missing,
+      warnings: draft.warnings,
+      sourceUrl: finalUrl,
+    };
+  } catch (e) {
+    return {
+      ok: false,
+      found: [],
+      missing: [],
+      warnings: [],
+      error: e instanceof Error ? e.message : "Could not scrape that URL.",
+    };
+  }
 }
 
 /** Persist a newly typed airline so it's reusable in future packages. Returns the clean name. */

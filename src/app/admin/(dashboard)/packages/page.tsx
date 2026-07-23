@@ -25,6 +25,9 @@ export default async function AdminPackagesPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button href="/admin/packages/scrape" variant="secondary">
+            <Icon name="travel_explore" className="text-base" /> Scrape from URL
+          </Button>
           <Button href="/admin/packages/import" variant="secondary">
             <Icon name="data_object" className="text-base" /> Import JSON
           </Button>
