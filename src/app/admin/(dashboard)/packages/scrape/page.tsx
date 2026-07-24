@@ -17,11 +17,12 @@ export default function ScrapePackagePage() {
       >
         <Icon name="arrow_back" className="text-base" /> Back to packages
       </Link>
-      <h1 className="mt-3 font-[var(--font-heading)] text-2xl text-on-surface">Scrape Package from URL</h1>
+      <h1 className="mt-3 font-[var(--font-heading)] text-2xl text-on-surface">Scrape Packages from URL</h1>
       <p className="mt-1 max-w-2xl text-sm text-on-surface-variant">
-        Paste a public package page and let the scraper draft the JSON for you. It fills what it can read,
-        maps airlines, cities, and hotels to your existing records, and hands you an editable draft — then
-        the same validate → preview → create checks run before anything is saved.
+        Paste a public listing page and the scraper reads <strong>every</strong> package on it. Each is
+        checked against your database: brand-new departures can be created, and ones you already carry are
+        flagged when the source changed their seats, prices, dates, or flight times — apply the update in one
+        click. Nothing is saved until you confirm.
       </p>
       <div className="mt-6">
         <ScrapePackageForm />

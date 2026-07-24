@@ -21,10 +21,14 @@ export function PackageJsonEditor({
   raw,
   onRawChange,
   label = "Package JSON",
+  onCreated,
 }: {
   raw: string;
   onRawChange: (value: string) => void;
   label?: string;
+  /** When provided, stay on the page and call this after a successful create
+   * (used by the multi-package scrape list). When omitted, redirect to the list. */
+  onCreated?: (created: { id: string; title: string }) => void;
 }) {
   const router = useRouter();
   const [result, setResult] = useState<ImportActionResult | null>(null);
@@ -55,7 +59,10 @@ export function PackageJsonEditor({
       try {
         const res = await importPackageAction(raw);
         setResult(res);
-        if (res.created) router.push("/admin/packages");
+        if (res.created) {
+          if (onCreated) onCreated(res.created);
+          else router.push("/admin/packages");
+        }
       } catch (e) {
         setFatalError(e instanceof Error ? e.message : "Could not create the package. Please try again.");
       }

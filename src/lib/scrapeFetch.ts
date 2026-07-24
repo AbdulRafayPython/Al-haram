@@ -11,8 +11,9 @@ import "server-only";
 import dns from "node:dns/promises";
 import net from "node:net";
 
-const TIMEOUT_MS = 12_000;
-const MAX_BYTES = 2_500_000;
+const TIMEOUT_MS = 20_000;
+// Listing pages with many packages are big (a full Umrah board can be 4–5 MB).
+const MAX_BYTES = 10_000_000;
 
 export interface FetchedPage {
   html: string;

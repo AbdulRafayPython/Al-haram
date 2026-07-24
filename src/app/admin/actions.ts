@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import sharp from "sharp";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { TablesUpdate } from "@/lib/supabase/types";
 import {
   packageInputToRow as toRow,
   assertPackageValid,
@@ -14,7 +15,14 @@ import {
   parseAndValidatePackageJson,
   type ImportContext,
 } from "@/lib/importPackage";
-import { extractPackageDraft } from "@/lib/scrapePackage";
+import {
+  extractPackageDrafts,
+  matchExisting,
+  diffAgainst,
+  type DraftSummary,
+  type ExistingLite,
+  type FieldChange,
+} from "@/lib/scrapePackage";
 import { fetchPage } from "@/lib/scrapeFetch";
 
 /**
@@ -178,58 +186,245 @@ export async function importPackageAction(raw: string): Promise<ImportActionResu
   };
 }
 
-// --- Scrape a package from a public URL -------------------------------------
+// --- Scrape ALL packages from a public listing URL --------------------------
 
-export interface ScrapeActionResult {
-  ok: boolean;
-  /** Draft JSON (PACKAGE_JSON_SAMPLE shape) to load into the import editor. */
-  json?: string;
-  /** Fields the extractor managed to fill. */
+/** One extracted package, classified against what's already in the DB. */
+export interface ScrapeItem {
+  /** Import-shape JSON for creating a NEW package (flows through importPackageAction). */
+  json: string;
+  /** Normalized values, sent back to apply changes to an existing match. */
+  summary: DraftSummary;
+  title: string;
+  packageCode: string | null;
+  status: "new" | "changed" | "unchanged";
+  matchedId: string | null;
+  matchedTitle: string | null;
+  changes: FieldChange[];
   found: string[];
-  /** Required fields still blank — the admin must complete these. */
   missing: string[];
-  /** Low-confidence guesses to double-check. */
   warnings: string[];
-  /** The final (post-redirect) URL that was read. */
+}
+
+export interface ScrapePackagesResult {
+  ok: boolean;
+  site?: string;
   sourceUrl?: string;
-  /** Set when the fetch/scrape itself failed. */
+  totalOnPage?: number;
+  truncated?: boolean;
+  counts?: { new: number; changed: number; unchanged: number };
+  items?: ScrapeItem[];
   error?: string;
 }
 
+/** Columns needed to match + diff a scraped package against existing records. */
+const EXISTING_SELECT =
+  "id, title, package_code, group_code, departure_date, airline, departure_city_code, duration_days, seats_total, seats_available, price_sharing, price_quad, price_triple, price_double, price_infant, price_child_no_bed, flight_departure_time, flight_arrival_time, makkah_hotel:hotels!packages_makkah_hotel_id_fkey(name), madinah_hotel:hotels!packages_madinah_hotel_id_fkey(name)";
+
+interface ExistingRow {
+  id: string;
+  title: string;
+  package_code: string | null;
+  group_code: string | null;
+  departure_date: string;
+  airline: string;
+  departure_city_code: string;
+  duration_days: number;
+  seats_total: number;
+  seats_available: number;
+  price_sharing: number | null;
+  price_quad: number | null;
+  price_triple: number | null;
+  price_double: number | null;
+  price_infant: number | null;
+  price_child_no_bed: number | null;
+  flight_departure_time: string | null;
+  flight_arrival_time: string | null;
+  makkah_hotel: { name: string } | null;
+  madinah_hotel: { name: string } | null;
+}
+
+function rowToLite(row: ExistingRow): ExistingLite {
+  return {
+    id: row.id,
+    title: row.title,
+    packageCode: row.package_code ?? null,
+    groupCode: row.group_code ?? null,
+    departureDate: row.departure_date,
+    airline: row.airline,
+    cityCode: row.departure_city_code,
+    durationDays: row.duration_days,
+    seatsTotal: row.seats_total,
+    seatsAvailable: row.seats_available,
+    prices: {
+      sharing: row.price_sharing ?? null,
+      quad: row.price_quad ?? null,
+      triple: row.price_triple ?? null,
+      double: row.price_double ?? null,
+      infant: row.price_infant ?? null,
+      childNoBed: row.price_child_no_bed ?? null,
+    },
+    flightDepartureTime: row.flight_departure_time ?? null,
+    flightArrivalTime: row.flight_arrival_time ?? null,
+    makkahHotel: row.makkah_hotel?.name ?? null,
+    madinahHotel: row.madinah_hotel?.name ?? null,
+  };
+}
+
 /**
- * Fetch a public page and run the deterministic extractor. This only produces a
- * *draft* — nothing is written. The draft is handed to the same editor and
- * validate → preview → create pipeline as the manual JSON import, so the admin
- * reviews and fixes it before `importPackageAction` re-validates and inserts.
+ * Fetch a public listing page and extract EVERY package on it. Each is
+ * classified as new / changed / unchanged against the DB (matched by package
+ * code, then departure date + airline + city + hotel). Nothing is written —
+ * new packages flow through the same validate → create pipeline as the JSON
+ * import; changes are applied via applyScrapedChangesAction.
  *
- * Admin-gated (this fetches an arbitrary external URL), even though the /admin
- * route is already proxy-protected.
+ * Admin-gated since it fetches an arbitrary external URL.
  */
-export async function scrapePackageAction(url: string): Promise<ScrapeActionResult> {
+export async function scrapePackagesAction(url: string): Promise<ScrapePackagesResult> {
   await assertAdmin();
   const clean = (url ?? "").trim();
-  if (!clean) return { ok: false, found: [], missing: [], warnings: [], error: "Paste a package page URL first." };
+  if (!clean) return { ok: false, error: "Paste a package page URL first." };
 
   try {
-    const [{ html, finalUrl }, { ctx }] = await Promise.all([fetchPage(clean), buildImportContext()]);
-    const draft = extractPackageDraft(html, finalUrl, ctx);
-    return {
-      ok: true,
-      json: draft.json,
-      found: draft.found,
-      missing: draft.missing,
-      warnings: draft.warnings,
-      sourceUrl: finalUrl,
-    };
+    const supabase = await createClient();
+    const [{ html, finalUrl }, { ctx }, existingRes] = await Promise.all([
+      fetchPage(clean),
+      buildImportContext(),
+      supabase.from("packages").select(EXISTING_SELECT),
+    ]);
+    if (existingRes.error) throw new Error(existingRes.error.message);
+    const existing = (existingRes.data as unknown as ExistingRow[]).map(rowToLite);
+
+    const { site, drafts, truncated, totalOnPage } = extractPackageDrafts(html, finalUrl, ctx);
+
+    const counts = { new: 0, changed: 0, unchanged: 0 };
+    const items: ScrapeItem[] = drafts.map((d) => {
+      const match = matchExisting(d.summary, existing);
+      let status: ScrapeItem["status"];
+      let changes: FieldChange[] = [];
+      if (!match) {
+        status = "new";
+        counts.new++;
+      } else {
+        changes = diffAgainst(d.summary, match);
+        status = changes.length ? "changed" : "unchanged";
+        counts[status]++;
+      }
+      return {
+        json: d.json,
+        summary: d.summary,
+        title: d.summary.title || "(untitled package)",
+        packageCode: d.summary.packageCode,
+        status,
+        matchedId: match?.id ?? null,
+        matchedTitle: match?.title ?? null,
+        changes,
+        found: d.found,
+        missing: d.missing,
+        warnings: d.warnings,
+      };
+    });
+
+    // Surface the actionable ones first: changed, then new, then unchanged.
+    const order = { changed: 0, new: 1, unchanged: 2 } as const;
+    items.sort((a, b) => order[a.status] - order[b.status]);
+
+    return { ok: true, site, sourceUrl: finalUrl, totalOnPage, truncated, counts, items };
   } catch (e) {
-    return {
-      ok: false,
-      found: [],
-      missing: [],
-      warnings: [],
-      error: e instanceof Error ? e.message : "Could not scrape that URL.",
-    };
+    return { ok: false, error: e instanceof Error ? e.message : "Could not scrape that URL." };
   }
+}
+
+const VALID_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const VALID_TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/**
+ * Apply a scraped package's changed values onto an existing DB package. Only a
+ * whitelisted set of columns (seats-available, prices, dates, duration, flight
+ * times) is ever written, and the diff is recomputed server-side against the
+ * live row — so this never rebuilds hotels/airline and can't be coerced into
+ * mass-assignment. Returns the changes actually applied.
+ */
+export async function applyScrapedChangesAction(
+  id: string,
+  summary: DraftSummary,
+): Promise<{ ok: boolean; updated?: FieldChange[]; error?: string }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("packages").select(EXISTING_SELECT).eq("id", id).single();
+  if (error || !data) return { ok: false, error: "That package no longer exists." };
+  const existing = rowToLite(data as unknown as ExistingRow);
+
+  const changes = diffAgainst(summary, existing);
+  if (changes.length === 0) return { ok: true, updated: [] };
+
+  const patch: Record<string, unknown> = {};
+
+  const num = (v: number | null) => (typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : null);
+  if (num(summary.seatsAvailable) != null && summary.seatsAvailable !== existing.seatsAvailable) {
+    patch.seats_available = Math.min(summary.seatsAvailable!, existing.seatsTotal);
+  }
+  const priceCols: [keyof DraftSummary["prices"], string][] = [
+    ["sharing", "price_sharing"],
+    ["quad", "price_quad"],
+    ["triple", "price_triple"],
+    ["double", "price_double"],
+    ["infant", "price_infant"],
+    ["childNoBed", "price_child_no_bed"],
+  ];
+  let priceChanged = false;
+  for (const [k, col] of priceCols) {
+    const v = num(summary.prices[k]);
+    if (v != null && v !== existing.prices[k]) {
+      patch[col] = v;
+      priceChanged = true;
+    }
+  }
+  if (summary.departureDate && VALID_DATE.test(summary.departureDate) && summary.departureDate !== existing.departureDate) {
+    patch.departure_date = summary.departureDate;
+  }
+  if (
+    summary.durationDays != null &&
+    Number.isInteger(summary.durationDays) &&
+    summary.durationDays > 0 &&
+    summary.durationDays !== existing.durationDays
+  ) {
+    patch.duration_days = summary.durationDays;
+  }
+  if (
+    summary.flightDepartureTime &&
+    VALID_TIME.test(summary.flightDepartureTime) &&
+    summary.flightDepartureTime !== existing.flightDepartureTime
+  ) {
+    patch.flight_departure_time = summary.flightDepartureTime;
+  }
+  if (
+    summary.flightArrivalTime &&
+    VALID_TIME.test(summary.flightArrivalTime) &&
+    summary.flightArrivalTime !== existing.flightArrivalTime
+  ) {
+    patch.flight_arrival_time = summary.flightArrivalTime;
+  }
+
+  // Keep the "from" headline price (cheapest offered tier) consistent.
+  if (priceChanged) {
+    const fin = {
+      sharing: (patch.price_sharing as number | undefined) ?? existing.prices.sharing,
+      quad: (patch.price_quad as number | undefined) ?? existing.prices.quad,
+      triple: (patch.price_triple as number | undefined) ?? existing.prices.triple,
+      double: (patch.price_double as number | undefined) ?? existing.prices.double,
+    };
+    const offered = Object.values(fin).filter((v): v is number => typeof v === "number" && v > 0);
+    if (offered.length) patch.price_pkr = Math.min(...offered);
+  }
+
+  if (Object.keys(patch).length === 0) return { ok: true, updated: [] };
+
+  const { error: upErr } = await supabase
+    .from("packages")
+    .update(patch as TablesUpdate<"packages">)
+    .eq("id", id);
+  if (upErr) return { ok: false, error: upErr.message };
+  revalidatePublicPages();
+  return { ok: true, updated: changes };
 }
 
 /** Persist a newly typed airline so it's reusable in future packages. Returns the clean name. */
