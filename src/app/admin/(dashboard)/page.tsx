@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
 import { formatNumber, formatDate } from "@/lib/format";
-import { getAllPackagesForAdmin } from "@/lib/data/packages";
+import { getAdminDashboardData } from "@/lib/data/packages";
 
 export const metadata: Metadata = {
   title: "Admin Dashboard",
@@ -13,18 +13,14 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  const packages = await getAllPackagesForAdmin();
-  const seatsAvailable = packages.reduce((sum, p) => sum + p.seatsAvailable, 0);
-  const soldOut = packages.filter((p) => p.seatsAvailable === 0).length;
+  const { total, seatsAvailable, soldOut, featured, recent } = await getAdminDashboardData();
 
   const summary = [
-    { icon: "flight_class", value: formatNumber(packages.length), label: "Total Packages" },
+    { icon: "flight_class", value: formatNumber(total), label: "Total Packages" },
     { icon: "event_seat", value: formatNumber(seatsAvailable), label: "Available Seats" },
     { icon: "do_not_disturb_on", value: formatNumber(soldOut), label: "Sold Out" },
-    { icon: "star", value: formatNumber(packages.filter((p) => p.featured).length), label: "Featured" },
+    { icon: "star", value: formatNumber(featured), label: "Featured" },
   ];
-
-  const recent = packages.slice(0, 6);
 
   return (
     <div>

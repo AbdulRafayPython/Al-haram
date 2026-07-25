@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
+import Link from "next/link";
 import { formatDate, formatPkr } from "@/lib/format";
-import { getAllPackagesForAdmin } from "@/lib/data/packages";
+import { getAdminPackagesPage, ADMIN_PAGE_SIZE } from "@/lib/data/packages";
 import { PackageRowActions } from "./PackageRowActions";
 
 export const metadata: Metadata = {
@@ -12,8 +13,15 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminPackagesPage() {
-  const packages = await getAllPackagesForAdmin();
+export default async function AdminPackagesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const pageParam = Number((await searchParams).page ?? "1");
+  const { items: packages, total, page, pageCount } = await getAdminPackagesPage(pageParam);
+  const firstShown = total === 0 ? 0 : (page - 1) * ADMIN_PAGE_SIZE + 1;
+  const lastShown = Math.min(page * ADMIN_PAGE_SIZE, total);
 
   return (
     <div>
@@ -21,7 +29,9 @@ export default async function AdminPackagesPage() {
         <div>
           <h1 className="font-[var(--font-heading)] text-2xl text-on-surface">Umrah Packages</h1>
           <p className="mt-1 text-sm text-on-surface-variant">
-            {packages.length} package{packages.length === 1 ? "" : "s"} in the system.
+            {total === 0
+              ? "No packages in the system."
+              : `Showing ${firstShown}–${lastShown} of ${total} package${total === 1 ? "" : "s"}.`}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -94,6 +104,45 @@ export default async function AdminPackagesPage() {
           </div>
         )}
       </div>
+
+      {pageCount > 1 && (
+        <nav className="mt-5 flex items-center justify-between gap-3" aria-label="Pagination">
+          <PagerLink href={`/admin/packages?page=${page - 1}`} disabled={page <= 1}>
+            <Icon name="chevron_left" className="text-base" /> Previous
+          </PagerLink>
+          <p className="text-sm text-on-surface-variant">
+            Page {page} of {pageCount}
+          </p>
+          <PagerLink href={`/admin/packages?page=${page + 1}`} disabled={page >= pageCount}>
+            Next <Icon name="chevron_right" className="text-base" />
+          </PagerLink>
+        </nav>
+      )}
     </div>
+  );
+}
+
+function PagerLink({
+  href,
+  disabled,
+  children,
+}: {
+  href: string;
+  disabled: boolean;
+  children: React.ReactNode;
+}) {
+  const base =
+    "inline-flex items-center gap-1 rounded-lg border px-4 py-2 text-sm font-semibold transition-colors";
+  if (disabled) {
+    return (
+      <span className={`${base} pointer-events-none border-outline-variant/30 text-on-surface-variant/40`}>
+        {children}
+      </span>
+    );
+  }
+  return (
+    <Link href={href} className={`${base} border-outline-variant text-on-surface hover:border-secondary`}>
+      {children}
+    </Link>
   );
 }
