@@ -39,7 +39,20 @@ const nodeOptions = [process.env.NODE_OPTIONS, `--max-old-space-size=${heapMb}`]
   .filter(Boolean)
   .join(" ");
 
-const child = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "dev", ...process.argv.slice(2)], {
+// `next dev` starts the server with Node's --enable-source-maps, which keeps a
+// parsed source map for every loaded module in memory and makes every thrown
+// error/stack walk far more expensive. On a RAM-tight machine that's a large
+// share of the dev server's footprint. Set DEV_SOURCE_MAPS=1 to get them back
+// when you actually need to debug a server stack trace.
+const wantSourceMaps = process.env.DEV_SOURCE_MAPS === "1";
+const passthrough = process.argv.slice(2);
+const args = [require.resolve("next/dist/bin/next"), "dev", ...passthrough];
+if (!wantSourceMaps && !passthrough.includes("--disable-source-maps")) {
+  args.push("--disable-source-maps");
+}
+console.log(`[dev] server source maps: ${wantSourceMaps ? "on" : "off (DEV_SOURCE_MAPS=1 to enable)"}`);
+
+const child = spawn(process.execPath, args, {
   stdio: "inherit",
   env: { ...process.env, NODE_OPTIONS: nodeOptions },
 });

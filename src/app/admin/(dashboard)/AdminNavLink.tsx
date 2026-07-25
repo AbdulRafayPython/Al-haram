@@ -20,6 +20,11 @@ export function AdminNavLink({
   return (
     <Link
       href={href}
+      // Admin pages are `force-dynamic`, so auto-prefetch would only fetch the
+      // loading skeleton and still block on the server after the click. Forcing
+      // prefetch pulls each tab's RSC payload (now ~15 KB) in the background and
+      // serves the switch from the client router cache — the click feels instant.
+      prefetch
       className={clsx(
         "flex shrink-0 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors md:shrink",
         isActive
