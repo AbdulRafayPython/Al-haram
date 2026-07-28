@@ -24,6 +24,7 @@ import {
   type FieldChange,
 } from "@/lib/scrapePackage";
 import { fetchPage } from "@/lib/scrapeFetch";
+import { BANNER_VARIANTS } from "@/data/banners";
 
 /**
  * Verifies the current session belongs to an admin before any service-role
@@ -658,4 +659,131 @@ export async function togglePublishAction(id: string, isPublished: boolean) {
     .eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePublicPages();
+}
+
+/* ------------------------------------------------------------------ *
+ * Flash / promo banners
+ *
+ * The banner is rendered from the root of the public layout, so a change to
+ * any banner has to invalidate the whole layout — not just "/".
+ * ------------------------------------------------------------------ */
+
+function revalidateBannerPages() {
+  revalidatePath("/", "layout");
+  revalidatePath("/admin/banners");
+}
+
+export interface BannerFormInput {
+  label: string;
+  message: string;
+  ctaLabel: string;
+  ctaHref: string;
+  variant: string;
+  isFlashing: boolean;
+  isActive: boolean;
+  /** `datetime-local` values ("2026-08-01T09:00") or "" for unbounded. */
+  startsAt: string;
+  endsAt: string;
+  sortOrder: number;
+}
+
+/**
+ * A CTA link may only be an in-site path or an http(s) URL. This is the guard
+ * that keeps `javascript:`/`data:` out of an anchor rendered on every page.
+ */
+function normalizeCtaHref(raw: string): string {
+  const href = raw.trim();
+  // "//evil.com" also starts with "/" but is protocol-relative — i.e. offsite.
+  if (href.startsWith("/") && !href.startsWith("//")) return href;
+  let parsed: URL;
+  try {
+    parsed = new URL(href);
+  } catch {
+    throw new Error('Button link must be a site path (e.g. "/contact") or a full https:// URL.');
+  }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    throw new Error("Button link must use http:// or https://.");
+  }
+  return parsed.toString();
+}
+
+/** `datetime-local` is local wall-clock time; store it as an absolute instant. */
+function toTimestamp(raw: string, field: string): string | null {
+  const value = raw.trim();
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) throw new Error(`${field} is not a valid date and time.`);
+  return date.toISOString();
+}
+
+/** Shared shaping + validation for create and update — mirrors the table's CHECK constraints. */
+function bannerInputToRow(input: BannerFormInput) {
+  const label = input.label.trim();
+  const message = input.message.trim();
+  const ctaLabel = input.ctaLabel.trim();
+  const ctaHref = input.ctaHref.trim();
+
+  if (!message) throw new Error("Banner message is required.");
+  if (message.length > 200) throw new Error("Banner message must be 200 characters or fewer.");
+  if (label.length > 40) throw new Error("Label must be 40 characters or fewer.");
+  if (ctaLabel.length > 40) throw new Error("Button text must be 40 characters or fewer.");
+  if (Boolean(ctaLabel) !== Boolean(ctaHref)) {
+    throw new Error("A button needs both text and a link — fill in both, or leave both empty.");
+  }
+  if (!BANNER_VARIANTS.includes(input.variant as (typeof BANNER_VARIANTS)[number])) {
+    throw new Error("Choose a valid banner style.");
+  }
+
+  const startsAt = toTimestamp(input.startsAt, "Start date");
+  const endsAt = toTimestamp(input.endsAt, "End date");
+  if (startsAt && endsAt && endsAt <= startsAt) {
+    throw new Error("The end date must be after the start date.");
+  }
+
+  return {
+    label: label || null,
+    message,
+    cta_label: ctaLabel || null,
+    cta_href: ctaHref ? normalizeCtaHref(ctaHref) : null,
+    variant: input.variant,
+    is_flashing: input.isFlashing,
+    is_active: input.isActive,
+    starts_at: startsAt,
+    ends_at: endsAt,
+    sort_order: Number.isFinite(input.sortOrder) ? Math.trunc(input.sortOrder) : 0,
+  };
+}
+
+export async function createBannerAction(input: BannerFormInput) {
+  const row = bannerInputToRow(input);
+  const supabase = await createClient();
+  const { error } = await supabase.from("promo_banners").insert(row);
+  if (error) throw new Error(error.message);
+  revalidateBannerPages();
+}
+
+export async function updateBannerAction(id: string, input: BannerFormInput) {
+  const row = bannerInputToRow(input);
+  const supabase = await createClient();
+  const { error } = await supabase.from("promo_banners").update(row).eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidateBannerPages();
+}
+
+/** The admin's one-click on/off switch — the rest of the campaign copy is untouched. */
+export async function toggleBannerAction(id: string, isActive: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("promo_banners")
+    .update({ is_active: isActive })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidateBannerPages();
+}
+
+export async function deleteBannerAction(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("promo_banners").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidateBannerPages();
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Jost, Rubik, Satisfy, Playfair_Display } from "next/font/google";
+import { Jost, Rubik, Satisfy, Playfair_Display, Amiri } from "next/font/google";
 import "./globals.css";
 import { site } from "@/data/site";
 
@@ -29,6 +29,14 @@ const playfair = Playfair_Display({
   display: "swap",
 });
 
+/* Naskh serif for Arabic script (Basmala bar, Talbiyah) — Latin never uses it. */
+const amiri = Amiri({
+  subsets: ["arabic"],
+  weight: ["400", "700"],
+  variable: "--font-amiri",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: {
     default: `${site.name} — Umrah Packages, Hotels & Visas from Pakistan`,
@@ -47,7 +55,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${jost.variable} ${rubik.variable} ${satisfy.variable} ${playfair.variable}`}
+      className={`${jost.variable} ${rubik.variable} ${satisfy.variable} ${playfair.variable} ${amiri.variable}`}
     >
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />

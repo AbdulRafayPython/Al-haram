@@ -56,6 +56,8 @@
   --font-script: var(--font-satisfy), cursive;
   /* Premium serif for standout page titles (hero headlines) */
   --font-display: var(--font-playfair), Georgia, serif;
+  /* Naskh serif for Arabic script — Basmala bar, Talbiyah */
+  --font-arabic: var(--font-amiri), "Traditional Arabic", serif;
 
   /* Layout rhythm */
   --spacing-gutter: 24px;
@@ -133,5 +135,51 @@
     opacity: 1;
     transform: none;
     transition: none;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Flash offer banner — subtle attention cues.
+ * `flash-pulse` breathes the banner's own tint; `flash-sheen` sweeps a
+ * highlight across it. Both are slow and low-contrast on purpose: the goal
+ * is a glance-catcher, not a strobe. Disabled under reduced-motion.
+ * ------------------------------------------------------------------ */
+@keyframes flash-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.82; }
+}
+
+@keyframes flash-sheen {
+  0% { transform: translateX(-100%); }
+  /* Long tail so the sweep reads as an occasional glint, not a loop. */
+  55%, 100% { transform: translateX(250%); }
+}
+
+.flash-banner-pulse {
+  animation: flash-pulse 2.8s ease-in-out infinite;
+}
+
+.flash-banner-sheen {
+  animation: flash-sheen 5s ease-in-out infinite;
+}
+
+/* Slow gold blink for the leading dot/label of a flash banner. */
+@keyframes flash-blink {
+  0%, 45%, 100% { opacity: 1; }
+  60%, 85% { opacity: 0.25; }
+}
+
+.flash-banner-blink {
+  animation: flash-blink 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flash-banner-pulse,
+  .flash-banner-sheen,
+  .flash-banner-blink {
+    animation: none;
+  }
+  .flash-banner-sheen {
+    display: none;
   }
 }

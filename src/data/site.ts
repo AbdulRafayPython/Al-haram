@@ -17,6 +17,11 @@ export const site = {
   // Static payment QR shown after a booking is confirmed. Drop the real
   // JazzCash/EasyPaisa/bank QR image at this path in /public.
   paymentQrSrc: "/images/payment-qr.png",
+  // Soft Talbiyah recitation for the floating Talbiyah panel. Never autoplays —
+  // it only sounds after the visitor presses play. If the file is ever missing
+  // the panel hides its sound control and shows the Talbiyah text only.
+  // Keep the filename ASCII and space-free — see public/audio/README.md.
+  talbiyahAudioSrc: "/audio/talbiyah.mp3",
   // TODO: swap in the real profile URLs once available — placeholders for now.
   social: {
     facebook: "#",

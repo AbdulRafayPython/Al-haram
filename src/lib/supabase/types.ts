@@ -335,6 +335,54 @@ export type Database = {
           },
         ]
       }
+      promo_banners: {
+        Row: {
+          created_at: string
+          cta_href: string | null
+          cta_label: string | null
+          ends_at: string | null
+          id: string
+          is_active: boolean
+          is_flashing: boolean
+          label: string | null
+          message: string
+          sort_order: number
+          starts_at: string | null
+          updated_at: string
+          variant: string
+        }
+        Insert: {
+          created_at?: string
+          cta_href?: string | null
+          cta_label?: string | null
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          is_flashing?: boolean
+          label?: string | null
+          message: string
+          sort_order?: number
+          starts_at?: string | null
+          updated_at?: string
+          variant?: string
+        }
+        Update: {
+          created_at?: string
+          cta_href?: string | null
+          cta_label?: string | null
+          ends_at?: string | null
+          id?: string
+          is_active?: boolean
+          is_flashing?: boolean
+          label?: string | null
+          message?: string
+          sort_order?: number
+          starts_at?: string | null
+          updated_at?: string
+          variant?: string
+        }
+        Relationships: []
+      }
       testimonials: {
         Row: {
           created_at: string

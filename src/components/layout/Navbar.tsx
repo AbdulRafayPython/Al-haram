@@ -23,24 +23,29 @@ export function Navbar() {
 
   return (
     <header className="relative z-50">
-      {/* Top utility bar */}
+      {/* Top utility bar — the Basmala sits centred here on every page.
+          Phone and socials are the flanking rails; on small screens they drop
+          away so the Basmala keeps the full width and stays centred. */}
       <div className="bg-tertiary text-on-tertiary/80">
-        <Container className="flex h-9 items-center justify-between text-xs">
+        <Container className="flex h-10 items-center justify-between gap-3 text-xs">
           <a
             href={site.phoneHref}
-            className="hidden items-center gap-2 transition-colors hover:text-secondary-fixed sm:flex"
+            className="hidden shrink-0 items-center gap-2 transition-colors hover:text-secondary-fixed sm:flex sm:basis-0 sm:flex-1"
           >
             <Icon name="call" className="text-sm text-secondary-fixed" />
             {site.phone}
           </a>
-          <p className="flex items-center gap-2 text-center">
-            <span className="font-semibold text-secondary-fixed">20% Off</span>
-            <span className="hidden sm:inline">Your Next Trip — Hurry up for your new tour!</span>
-            <Link href="/" className="font-semibold underline hover:text-secondary-fixed">
-              Book Now
-            </Link>
+
+          <p
+            lang="ar"
+            dir="rtl"
+            title="In the name of Allah, the Most Gracious, the Most Merciful"
+            className="min-w-0 flex-1 truncate text-center font-[family-name:var(--font-arabic)] text-base leading-relaxed text-secondary-fixed sm:text-lg"
+          >
+            بسم الله الرحمن الرحيم
           </p>
-          <div className="hidden items-center gap-3 sm:flex">
+
+          <div className="hidden shrink-0 items-center justify-end gap-3 sm:flex sm:basis-0 sm:flex-1">
             {socials.map((s) => (
               <a key={s.label} href={s.href} aria-label={s.label} className="hover:text-secondary-fixed">
                 <Icon name={s.icon} className="text-sm" />

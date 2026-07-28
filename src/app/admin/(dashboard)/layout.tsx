@@ -11,6 +11,7 @@ const navItems = [
   { href: "/admin/hotels", icon: "apartment", label: "Hotels" },
   { href: "/admin/airlines", icon: "flight", label: "Airlines" },
   { href: "/admin/cities", icon: "location_city", label: "Cities" },
+  { href: "/admin/banners", icon: "campaign", label: "Flash Banners" },
 ];
 
 export default function AdminDashboardLayout({
