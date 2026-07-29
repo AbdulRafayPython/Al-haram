@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { Icon } from "@/components/ui/Icon";
-import { mainNav, site } from "@/data/site";
+import { mainNav, site, socialLinks } from "@/data/site";
 
 export function Footer() {
   return (
@@ -17,14 +17,12 @@ export function Footer() {
             and personalized pilgrimage packages from Pakistan.
           </p>
           <div className="flex gap-3">
-            {[
-              { icon: "public", href: site.social.facebook, label: "Facebook" },
-              { icon: "photo_camera", href: site.social.instagram, label: "Instagram" },
-              { icon: "smart_display", href: site.social.youtube, label: "YouTube" },
-            ].map((s) => (
+            {socialLinks.map((s) => (
               <a
                 key={s.label}
                 href={s.href}
+                target="_blank"
+                rel="noopener noreferrer"
                 aria-label={s.label}
                 className="flex h-10 w-10 items-center justify-center rounded-full border border-on-tertiary/20 text-on-tertiary transition-colors hover:border-secondary-fixed hover:text-secondary-fixed"
               >

@@ -19,13 +19,42 @@ export const site = {
   // the panel hides its sound control and shows the Talbiyah text only.
   // Keep the filename ASCII and space-free — see public/audio/README.md.
   talbiyahAudioSrc: "/audio/talbiyah.mp3",
-  // TODO: swap in the real profile URLs once available — placeholders for now.
   social: {
-    facebook: "#",
-    instagram: "#",
-    youtube: "#",
+    // Canonical profile URL. The client supplied a /share/1CoapFF7fA/ short
+    // link; that redirects here, and the resolved form doesn't depend on a
+    // share token that Facebook can regenerate.
+    facebook: "https://www.facebook.com/people/Sasta-Travel-Express/61592189601742/",
+    // QR tracking params (utm_source=qr&igsh=…) stripped on purpose — they came
+    // from scanning the printed QR, and leaving them on a site-wide link would
+    // report all website traffic as QR traffic in Instagram's insights.
+    instagram: "https://www.instagram.com/sastatravelexpress",
+    // Not set up yet. Left null rather than "#": see socialLinks below.
+    youtube: null,
   },
 } as const;
+
+/**
+ * Social icons to render, in order. An entry without a URL is dropped rather
+ * than rendered pointing at "#" — a dead icon looks live and wastes a click.
+ * Add the YouTube URL in `site.social` and the icon appears by itself.
+ */
+export interface SocialLink {
+  icon: string;
+  href: string;
+  label: string;
+}
+
+// Widened to `string | null` up front: `site` is `as const`, so without this the
+// literal types make the narrowing predicate below unassignable.
+const allSocials: { icon: string; href: string | null; label: string }[] = [
+  { icon: "public", href: site.social.facebook, label: "Facebook" },
+  { icon: "photo_camera", href: site.social.instagram, label: "Instagram" },
+  { icon: "smart_display", href: site.social.youtube, label: "YouTube" },
+];
+
+export const socialLinks: SocialLink[] = allSocials.filter(
+  (s): s is SocialLink => Boolean(s.href),
+);
 
 export const mainNav = [
   { label: "Home", href: "/home" },

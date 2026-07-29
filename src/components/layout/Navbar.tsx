@@ -6,13 +6,7 @@ import { usePathname } from "next/navigation";
 import { Container } from "@/components/ui/Container";
 import { Icon } from "@/components/ui/Icon";
 import { clsx } from "@/lib/clsx";
-import { mainNav, site } from "@/data/site";
-
-const socials = [
-  { icon: "public", href: site.social.facebook, label: "Facebook" },
-  { icon: "photo_camera", href: site.social.instagram, label: "Instagram" },
-  { icon: "smart_display", href: site.social.youtube, label: "YouTube" },
-];
+import { mainNav, site, socialLinks } from "@/data/site";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -46,8 +40,15 @@ export function Navbar() {
           </p>
 
           <div className="hidden shrink-0 items-center justify-end gap-3 sm:flex sm:basis-0 sm:flex-1">
-            {socials.map((s) => (
-              <a key={s.label} href={s.href} aria-label={s.label} className="hover:text-secondary-fixed">
+            {socialLinks.map((s) => (
+              <a
+                key={s.label}
+                href={s.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={s.label}
+                className="hover:text-secondary-fixed"
+              >
                 <Icon name={s.icon} className="text-sm" />
               </a>
             ))}
