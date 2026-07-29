@@ -341,13 +341,16 @@ export type Database = {
           cta_href: string | null
           cta_label: string | null
           ends_at: string | null
+          highlights: string[]
           id: string
+          image_url: string | null
           is_active: boolean
           is_flashing: boolean
           label: string | null
           message: string
           sort_order: number
           starts_at: string | null
+          title: string | null
           updated_at: string
           variant: string
         }
@@ -356,13 +359,16 @@ export type Database = {
           cta_href?: string | null
           cta_label?: string | null
           ends_at?: string | null
+          highlights?: string[]
           id?: string
+          image_url?: string | null
           is_active?: boolean
           is_flashing?: boolean
           label?: string | null
           message: string
           sort_order?: number
           starts_at?: string | null
+          title?: string | null
           updated_at?: string
           variant?: string
         }
@@ -371,13 +377,16 @@ export type Database = {
           cta_href?: string | null
           cta_label?: string | null
           ends_at?: string | null
+          highlights?: string[]
           id?: string
+          image_url?: string | null
           is_active?: boolean
           is_flashing?: boolean
           label?: string | null
           message?: string
           sort_order?: number
           starts_at?: string | null
+          title?: string | null
           updated_at?: string
           variant?: string
         }
@@ -494,6 +503,7 @@ export type Database = {
     }
     Functions: {
       is_admin: { Args: never; Returns: boolean }
+      promo_highlights_valid: { Args: { h: string[] }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

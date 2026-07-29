@@ -3,11 +3,14 @@ import { createClient } from "@/lib/supabase/server";
 import { isBannerVariant, type PromoBanner } from "@/data/banners";
 
 const BANNER_SELECT =
-  "id, label, message, cta_label, cta_href, variant, is_flashing, is_active, starts_at, ends_at, sort_order, updated_at";
+  "id, label, title, image_url, highlights, message, cta_label, cta_href, variant, is_flashing, is_active, starts_at, ends_at, sort_order, updated_at";
 
 type BannerRow = {
   id: string;
   label: string | null;
+  title: string | null;
+  image_url: string | null;
+  highlights: string[] | null;
   message: string;
   cta_label: string | null;
   cta_href: string | null;
@@ -24,6 +27,9 @@ function mapBanner(row: BannerRow): PromoBanner {
   return {
     id: row.id,
     label: row.label,
+    title: row.title,
+    imageUrl: row.image_url,
+    highlights: row.highlights ?? [],
     message: row.message,
     ctaLabel: row.cta_label,
     ctaHref: row.cta_href,

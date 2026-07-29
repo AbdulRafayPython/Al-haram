@@ -8,12 +8,16 @@ import { FlashBanner } from "@/components/layout/FlashBanner";
 import {
   createBannerAction,
   deleteBannerAction,
+  removeBannerImageAction,
   toggleBannerAction,
   updateBannerAction,
+  uploadBannerImageAction,
   type BannerFormInput,
 } from "@/app/admin/actions";
 import {
   BANNER_VARIANTS,
+  MAX_HIGHLIGHTS,
+  MAX_HIGHLIGHT_LENGTH,
   bannerVariantLabels as variantLabels,
   type BannerVariant,
   type PromoBanner,
@@ -26,6 +30,8 @@ import {
 
 const emptyForm: BannerFormInput = {
   label: "",
+  title: "",
+  highlights: [],
   message: "",
   ctaLabel: "",
   ctaHref: "",
@@ -44,7 +50,9 @@ const presets: { name: string; icon: string; form: Partial<BannerFormInput> }[] 
     icon: "bolt",
     form: {
       label: "Limited Time Offer",
-      message: "Book your Umrah package this week and save on every seat.",
+      title: "Save On Every Umrah Seat",
+      message: "Book your Umrah package this week and travel with our best rates of the season.",
+      highlights: ["Verified Hotels", "Direct Flights", "Visa Included"],
       ctaLabel: "View Packages",
       ctaHref: "/",
       variant: "gold",
@@ -55,7 +63,9 @@ const presets: { name: string; icon: string; form: Partial<BannerFormInput> }[] 
     icon: "new_releases",
     form: {
       label: "Just Added",
-      message: "New Ramadan departures are now open for booking.",
+      title: "New Ramadan Departures",
+      message: "Fresh Ramadan groups are now open for booking, with limited seats per departure.",
+      highlights: ["Ramadan 2026", "Limited Seats"],
       ctaLabel: "See Departures",
       ctaHref: "/",
       variant: "navy",
@@ -66,7 +76,9 @@ const presets: { name: string; icon: string; form: Partial<BannerFormInput> }[] 
     icon: "verified",
     form: {
       label: "Included",
-      message: "Free visa processing on all group packages this month.",
+      title: "Free Visa Processing",
+      message: "Visa processing is on us for every group package booked this month.",
+      highlights: ["No Hidden Fees", "Fast Processing"],
       ctaLabel: "Enquire Now",
       ctaHref: "/contact",
       variant: "dark",
@@ -88,6 +100,8 @@ function toLocalInput(iso: string | null): string {
 function toForm(banner: PromoBanner): BannerFormInput {
   return {
     label: banner.label ?? "",
+    title: banner.title ?? "",
+    highlights: banner.highlights,
     message: banner.message,
     ctaLabel: banner.ctaLabel ?? "",
     ctaHref: banner.ctaHref ?? "",
@@ -221,6 +235,8 @@ export function BannersAdmin({ banners }: { banners: PromoBanner[] }) {
           form={form}
           setForm={setForm}
           isEditing={editingId !== null}
+          editingBanner={banners.find((b) => b.id === editingId) ?? null}
+          onImageChanged={() => router.refresh()}
           pending={pending}
           error={formError}
           onSave={handleSave}
@@ -341,6 +357,8 @@ function BannerForm({
   form,
   setForm,
   isEditing,
+  editingBanner,
+  onImageChanged,
   pending,
   error,
   onSave,
@@ -350,6 +368,8 @@ function BannerForm({
   form: BannerFormInput;
   setForm: React.Dispatch<React.SetStateAction<BannerFormInput>>;
   isEditing: boolean;
+  editingBanner: PromoBanner | null;
+  onImageChanged: () => void;
   pending: boolean;
   error: string | null;
   onSave: () => void;
@@ -358,6 +378,8 @@ function BannerForm({
 }) {
   const set = <K extends keyof BannerFormInput>(key: K, value: BannerFormInput[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
+
+  const imageUrl = editingBanner?.imageUrl ?? null;
 
   // A button needs both halves. Catching it here — at the field, as they type —
   // beats a round trip that comes back with a form-level error.
@@ -370,6 +392,9 @@ function BannerForm({
   const previewBanner: PromoBanner = {
     id: "preview",
     label: form.label.trim() || null,
+    title: form.title.trim() || null,
+    imageUrl: imageUrl ?? null,
+    highlights: form.highlights.map((h) => h.trim()).filter(Boolean),
     message: form.message.trim() || "Your announcement text will appear here.",
     ctaLabel: form.ctaLabel.trim() || null,
     ctaHref: form.ctaHref.trim() || null,
@@ -444,8 +469,22 @@ function BannerForm({
           />
         </label>
 
+        <label className="sm:col-span-2">
+          <span className={labelClass}>Headline (optional)</span>
+          <input
+            value={form.title}
+            onChange={(e) => set("title", e.target.value)}
+            maxLength={80}
+            placeholder="e.g. 25 Hajees = 1 Free Umrah"
+            className={inputClass}
+          />
+          <span className="mt-1 block text-[0.65rem] text-on-surface-variant">
+            The big line on the card. Leave empty and the message carries it alone.
+          </span>
+        </label>
+
         <label>
-          <span className={labelClass}>Label (optional)</span>
+          <span className={labelClass}>Badge (optional)</span>
           <input
             value={form.label}
             onChange={(e) => set("label", e.target.value)}
@@ -500,6 +539,66 @@ function BannerForm({
             </span>
           )}
         </label>
+
+        <div className="sm:col-span-2">
+          <span className={labelClass}>Feature pills (optional)</span>
+          <div className="flex flex-wrap gap-2">
+            {form.highlights.map((h, i) => (
+              <span key={i} className="inline-flex items-center gap-1 rounded-lg border border-outline-variant bg-surface-container pl-2.5">
+                <input
+                  value={h}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      highlights: f.highlights.map((x, xi) => (xi === i ? e.target.value : x)),
+                    }))
+                  }
+                  maxLength={MAX_HIGHLIGHT_LENGTH}
+                  placeholder="e.g. Visa Included"
+                  className="w-36 bg-transparent py-1.5 text-xs text-on-surface focus:outline-none"
+                />
+                <button
+                  type="button"
+                  aria-label="Remove pill"
+                  onClick={() =>
+                    setForm((f) => ({ ...f, highlights: f.highlights.filter((_, xi) => xi !== i) }))
+                  }
+                  className="px-1.5 text-on-surface-variant hover:text-error"
+                >
+                  <Icon name="close" className="text-sm" />
+                </button>
+              </span>
+            ))}
+            {form.highlights.length < MAX_HIGHLIGHTS && (
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, highlights: [...f.highlights, ""] }))}
+                className="inline-flex items-center gap-1 rounded-lg border border-dashed border-outline-variant px-3 py-1.5 text-xs text-on-surface-variant transition-colors hover:border-secondary hover:text-secondary"
+              >
+                <Icon name="add" className="text-sm" />
+                Add pill
+              </button>
+            )}
+          </div>
+          <span className="mt-1 block text-[0.65rem] text-on-surface-variant">
+            Up to {MAX_HIGHLIGHTS} short selling points, {MAX_HIGHLIGHT_LENGTH} characters each.
+          </span>
+        </div>
+
+        <div className="sm:col-span-2">
+          <span className={labelClass}>Card image (optional)</span>
+          {isEditing && editingBanner ? (
+            <BannerImageField
+              bannerId={editingBanner.id}
+              imageUrl={imageUrl}
+              onChanged={onImageChanged}
+            />
+          ) : (
+            <p className="rounded-lg border border-dashed border-outline-variant px-3 py-3 text-xs text-on-surface-variant">
+              Create the banner first, then reopen it to add an image.
+            </p>
+          )}
+        </div>
 
         <label>
           <span className={labelClass}>Show from (optional)</span>
@@ -589,3 +688,105 @@ const labelClass =
 
 const inputClass =
   "w-full rounded-lg border border-outline-variant bg-surface-container px-3 py-2 text-sm text-on-surface focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20";
+
+/**
+ * Hero image for the card. Upload needs the banner to exist (the file is keyed
+ * by its id), so this only appears when editing a saved banner.
+ */
+function BannerImageField({
+  bannerId,
+  imageUrl,
+  onChanged,
+}: {
+  bannerId: string;
+  imageUrl: string | null;
+  onChanged: () => void;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function upload(file: File) {
+    setError(null);
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const result = await uploadBannerImageAction(bannerId, fd);
+      if (!result.ok) setError(result.error);
+      else onChanged();
+    } catch {
+      setError("Upload failed. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove() {
+    setError(null);
+    setBusy(true);
+    try {
+      const result = await removeBannerImageAction(bannerId);
+      if (!result.ok) setError(result.error);
+      else onChanged();
+    } catch {
+      setError("Could not remove the image.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-lg border border-outline-variant bg-surface-container p-3">
+      <div className="flex items-center gap-3">
+        {imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={imageUrl}
+            alt=""
+            className="h-14 w-24 shrink-0 rounded-md object-cover"
+          />
+        ) : (
+          <span className="flex h-14 w-24 shrink-0 items-center justify-center rounded-md bg-surface-container-high text-on-surface-variant">
+            <Icon name="image" className="text-xl" />
+          </span>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-outline-variant px-3 py-1.5 text-xs text-on-surface transition-colors hover:border-secondary hover:text-secondary">
+            {busy ? (
+              <Icon name="progress_activity" className="animate-spin text-sm" />
+            ) : (
+              <Icon name="upload" className="text-sm" />
+            )}
+            {imageUrl ? "Replace" : "Upload"}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={busy}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void upload(f);
+                e.target.value = "";
+              }}
+            />
+          </label>
+          {imageUrl && (
+            <button
+              type="button"
+              onClick={remove}
+              disabled={busy}
+              className="rounded-md px-2 py-1.5 text-xs text-error hover:bg-error/10 disabled:opacity-50"
+            >
+              Remove
+            </button>
+          )}
+        </div>
+      </div>
+      <p className="mt-2 text-[0.65rem] text-on-surface-variant">
+        Converted to WebP and cropped to the card. Wide/landscape images work best; under 5 MB.
+      </p>
+      {error && <p className="mt-1.5 text-xs text-error">{error}</p>}
+    </div>
+  );
+}

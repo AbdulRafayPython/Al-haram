@@ -18,10 +18,20 @@ export const bannerVariantLabels: Record<BannerVariant, string> = {
   dark: "Dark (subtle)",
 };
 
+/** Feature pills are capped in the DB — keep the UI and admin in step with it. */
+export const MAX_HIGHLIGHTS = 4;
+export const MAX_HIGHLIGHT_LENGTH = 28;
+
 export interface PromoBanner {
   id: string;
-  /** Short bold lead-in, e.g. "Limited Time Offer". */
+  /** Small badge above the headline, e.g. "Limited Time Offer". */
   label: string | null;
+  /** Headline of the card. Null falls back to the message carrying the card. */
+  title: string | null;
+  /** Hero image at the top of the card (Storage bucket "banner-images"). */
+  imageUrl: string | null;
+  /** Short feature pills under the description, max MAX_HIGHLIGHTS. */
+  highlights: string[];
   message: string;
   ctaLabel: string | null;
   ctaHref: string | null;

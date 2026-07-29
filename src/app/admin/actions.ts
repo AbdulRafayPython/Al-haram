@@ -24,7 +24,7 @@ import {
   type FieldChange,
 } from "@/lib/scrapePackage";
 import { fetchPage } from "@/lib/scrapeFetch";
-import { BANNER_VARIANTS } from "@/data/banners";
+import { BANNER_VARIANTS, MAX_HIGHLIGHTS, MAX_HIGHLIGHT_LENGTH } from "@/data/banners";
 
 /**
  * Verifies the current session belongs to an admin before any service-role
@@ -683,6 +683,8 @@ function revalidateBannerPages() {
 
 export interface BannerFormInput {
   label: string;
+  title: string;
+  highlights: string[];
   message: string;
   ctaLabel: string;
   ctaHref: string;
@@ -727,13 +729,24 @@ function toTimestamp(raw: string, field: string): string | null {
 /** Shared shaping + validation for create and update — mirrors the table's CHECK constraints. */
 function bannerInputToRow(input: BannerFormInput) {
   const label = input.label.trim();
+  const title = input.title.trim();
   const message = input.message.trim();
   const ctaLabel = input.ctaLabel.trim();
   const ctaHref = input.ctaHref.trim();
+  // Blank pills are dropped rather than rejected — an empty row in the admin's
+  // pill list just means "I didn't use this one".
+  const highlights = input.highlights.map((h) => h.trim()).filter(Boolean);
 
   if (!message) throw new Error("Banner message is required.");
   if (message.length > 200) throw new Error("Banner message must be 200 characters or fewer.");
   if (label.length > 40) throw new Error("Label must be 40 characters or fewer.");
+  if (title.length > 80) throw new Error("Headline must be 80 characters or fewer.");
+  if (highlights.length > MAX_HIGHLIGHTS) {
+    throw new Error(`Use at most ${MAX_HIGHLIGHTS} feature pills.`);
+  }
+  if (highlights.some((h) => h.length > MAX_HIGHLIGHT_LENGTH)) {
+    throw new Error(`Each feature pill must be ${MAX_HIGHLIGHT_LENGTH} characters or fewer.`);
+  }
   if (ctaLabel.length > 40) throw new Error("Button text must be 40 characters or fewer.");
   if (Boolean(ctaLabel) !== Boolean(ctaHref)) {
     throw new Error("A button needs both text and a link — fill in both, or leave both empty.");
@@ -750,6 +763,8 @@ function bannerInputToRow(input: BannerFormInput) {
 
   return {
     label: label || null,
+    title: title || null,
+    highlights,
     message,
     cta_label: ctaLabel || null,
     cta_href: ctaHref ? normalizeCtaHref(ctaHref) : null,
@@ -817,4 +832,67 @@ export async function deleteBannerAction(id: string): Promise<BannerActionResult
   if (error) return { ok: false, error: error.message };
   revalidateBannerPages();
   return { ok: true };
+}
+
+/** Upload/replace the hero image on a flash banner card. */
+export async function uploadBannerImageAction(
+  bannerId: string,
+  formData: FormData,
+): Promise<BannerActionResult> {
+  try {
+    await assertAdmin();
+
+    const file = formData.get("file");
+    if (!(file instanceof File) || file.size === 0) {
+      return { ok: false, error: "Choose an image to upload." };
+    }
+    if (!file.type.startsWith("image/")) {
+      return { ok: false, error: "Only image files are allowed." };
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      return { ok: false, error: "Image must be under 5 MB." };
+    }
+
+    // Converted to WebP and capped at card width (2x for retina) — a 4 MB phone
+    // photo would otherwise be the heaviest asset on the site.
+    const webp = await sharp(Buffer.from(await file.arrayBuffer()))
+      .resize(896, 448, { fit: "cover", withoutEnlargement: true })
+      .webp({ quality: 82 })
+      .toBuffer();
+
+    const admin = createAdminClient();
+    const path = `${bannerId}/${Date.now()}.webp`;
+    const { error: uploadError } = await admin.storage
+      .from("banner-images")
+      .upload(path, webp, { upsert: true, contentType: "image/webp" });
+    if (uploadError) return { ok: false, error: uploadError.message };
+
+    const { data: pub } = admin.storage.from("banner-images").getPublicUrl(path);
+    const { error } = await admin
+      .from("promo_banners")
+      .update({ image_url: pub.publicUrl })
+      .eq("id", bannerId);
+    if (error) return { ok: false, error: error.message };
+
+    revalidateBannerPages();
+    return { ok: true };
+  } catch (e) {
+    return bannerFailure(e);
+  }
+}
+
+export async function removeBannerImageAction(bannerId: string): Promise<BannerActionResult> {
+  try {
+    await assertAdmin();
+    const admin = createAdminClient();
+    const { error } = await admin
+      .from("promo_banners")
+      .update({ image_url: null })
+      .eq("id", bannerId);
+    if (error) return { ok: false, error: error.message };
+    revalidateBannerPages();
+    return { ok: true };
+  } catch (e) {
+    return bannerFailure(e);
+  }
 }
