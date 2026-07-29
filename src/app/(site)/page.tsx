@@ -40,9 +40,13 @@ export default async function UmrahPackagesPage() {
         eyebrow="Live Availability"
         title="Umrah Packages from Pakistan"
         description="Real-time departures with airline, hotel, room type, and seat status. Filter to find the journey that fits you."
-        image="/images/umrah-package.png"
+        // Pre-composed at 10.5:1 (the hero band is ~10:1) so object-cover scales
+        // by height and the whole skyline stays in frame instead of being sliced.
+        // Anchored right: the only thing trimmed on narrower screens is the
+        // empty dark space padded onto the left.
+        image="/images/umrah-package-wide.webp"
         imageVariant="night"
-        imagePosition="object-[72%_30%] md:object-[center_28%]"
+        imagePosition="object-right"
         align="left"
         compact
       />
