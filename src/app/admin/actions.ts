@@ -666,7 +666,15 @@ export async function togglePublishAction(id: string, isPublished: boolean) {
  *
  * The banner is rendered from the root of the public layout, so a change to
  * any banner has to invalidate the whole layout — not just "/".
+ *
+ * These actions RETURN their errors instead of throwing them. A Server Action
+ * that throws has its message stripped in production builds — the client only
+ * receives "An error occurred in the Server Components render" plus a digest —
+ * so a throw would turn every ordinary validation message ("that link isn't
+ * valid") into an unreadable crash for the admin. Returned values survive.
  * ------------------------------------------------------------------ */
+
+export type BannerActionResult = { ok: true } | { ok: false; error: string };
 
 function revalidateBannerPages() {
   revalidatePath("/", "layout");
@@ -754,36 +762,59 @@ function bannerInputToRow(input: BannerFormInput) {
   };
 }
 
-export async function createBannerAction(input: BannerFormInput) {
-  const row = bannerInputToRow(input);
-  const supabase = await createClient();
-  const { error } = await supabase.from("promo_banners").insert(row);
-  if (error) throw new Error(error.message);
-  revalidateBannerPages();
+/** Turns anything thrown above into a message the client can actually display. */
+function bannerFailure(e: unknown): BannerActionResult {
+  return { ok: false, error: e instanceof Error ? e.message : "Could not save the banner." };
 }
 
-export async function updateBannerAction(id: string, input: BannerFormInput) {
-  const row = bannerInputToRow(input);
-  const supabase = await createClient();
-  const { error } = await supabase.from("promo_banners").update(row).eq("id", id);
-  if (error) throw new Error(error.message);
-  revalidateBannerPages();
+export async function createBannerAction(input: BannerFormInput): Promise<BannerActionResult> {
+  try {
+    const row = bannerInputToRow(input);
+    const supabase = await createClient();
+    const { error } = await supabase.from("promo_banners").insert(row);
+    if (error) return { ok: false, error: error.message };
+    revalidateBannerPages();
+    return { ok: true };
+  } catch (e) {
+    return bannerFailure(e);
+  }
+}
+
+export async function updateBannerAction(
+  id: string,
+  input: BannerFormInput,
+): Promise<BannerActionResult> {
+  try {
+    const row = bannerInputToRow(input);
+    const supabase = await createClient();
+    const { error } = await supabase.from("promo_banners").update(row).eq("id", id);
+    if (error) return { ok: false, error: error.message };
+    revalidateBannerPages();
+    return { ok: true };
+  } catch (e) {
+    return bannerFailure(e);
+  }
 }
 
 /** The admin's one-click on/off switch — the rest of the campaign copy is untouched. */
-export async function toggleBannerAction(id: string, isActive: boolean) {
+export async function toggleBannerAction(
+  id: string,
+  isActive: boolean,
+): Promise<BannerActionResult> {
   const supabase = await createClient();
   const { error } = await supabase
     .from("promo_banners")
     .update({ is_active: isActive })
     .eq("id", id);
-  if (error) throw new Error(error.message);
+  if (error) return { ok: false, error: error.message };
   revalidateBannerPages();
+  return { ok: true };
 }
 
-export async function deleteBannerAction(id: string) {
+export async function deleteBannerAction(id: string): Promise<BannerActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.from("promo_banners").delete().eq("id", id);
-  if (error) throw new Error(error.message);
+  if (error) return { ok: false, error: error.message };
   revalidateBannerPages();
+  return { ok: true };
 }

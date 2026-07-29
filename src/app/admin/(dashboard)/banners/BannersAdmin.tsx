@@ -146,12 +146,20 @@ export function BannersAdmin({ banners }: { banners: PromoBanner[] }) {
     setFormError(null);
     startTransition(async () => {
       try {
-        if (editingId) await updateBannerAction(editingId, form);
-        else await createBannerAction(form);
+        const result = editingId
+          ? await updateBannerAction(editingId, form)
+          : await createBannerAction(form);
+        if (!result.ok) {
+          setFormError(result.error);
+          return;
+        }
         closeForm();
         router.refresh();
-      } catch (e) {
-        setFormError(e instanceof Error ? e.message : "Could not save the banner.");
+      } catch {
+        // Only a genuine crash lands here — the actions return their validation
+        // messages rather than throwing, because a thrown message is redacted
+        // in production builds.
+        setFormError("Something went wrong saving the banner. Please try again.");
       }
     });
   }
@@ -161,13 +169,11 @@ export function BannersAdmin({ banners }: { banners: PromoBanner[] }) {
     setBusyId(banner.id);
     startTransition(async () => {
       try {
-        await toggleBannerAction(banner.id, !banner.isActive);
-        router.refresh();
-      } catch (e) {
-        setRowError({
-          id: banner.id,
-          message: e instanceof Error ? e.message : "Could not change the banner.",
-        });
+        const result = await toggleBannerAction(banner.id, !banner.isActive);
+        if (!result.ok) setRowError({ id: banner.id, message: result.error });
+        else router.refresh();
+      } catch {
+        setRowError({ id: banner.id, message: "Could not change the banner. Please try again." });
       } finally {
         setBusyId(null);
       }
@@ -180,14 +186,15 @@ export function BannersAdmin({ banners }: { banners: PromoBanner[] }) {
     setBusyId(banner.id);
     startTransition(async () => {
       try {
-        await deleteBannerAction(banner.id);
+        const result = await deleteBannerAction(banner.id);
+        if (!result.ok) {
+          setRowError({ id: banner.id, message: result.error });
+          return;
+        }
         if (editingId === banner.id) closeForm();
         router.refresh();
-      } catch (e) {
-        setRowError({
-          id: banner.id,
-          message: e instanceof Error ? e.message : "Could not delete the banner.",
-        });
+      } catch {
+        setRowError({ id: banner.id, message: "Could not delete the banner. Please try again." });
       } finally {
         setBusyId(null);
       }
@@ -352,6 +359,12 @@ function BannerForm({
   const set = <K extends keyof BannerFormInput>(key: K, value: BannerFormInput[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
 
+  // A button needs both halves. Catching it here — at the field, as they type —
+  // beats a round trip that comes back with a form-level error.
+  const hasCtaLabel = Boolean(form.ctaLabel.trim());
+  const hasCtaHref = Boolean(form.ctaHref.trim());
+  const ctaIncomplete = hasCtaLabel !== hasCtaHref;
+
   // Shaped like a real banner so the preview renders through the same component
   // the public site uses — what you see here is exactly what ships.
   const previewBanner: PromoBanner = {
@@ -463,9 +476,14 @@ function BannerForm({
             value={form.ctaLabel}
             onChange={(e) => set("ctaLabel", e.target.value)}
             maxLength={40}
-            placeholder="Book Now"
-            className={inputClass}
+            placeholder="e.g. Book Now"
+            className={clsx(inputClass, ctaIncomplete && !hasCtaLabel && "border-error")}
           />
+          {ctaIncomplete && !hasCtaLabel && (
+            <span className="mt-1 block text-[0.65rem] text-error">
+              Add the text to show on the button, or clear the link.
+            </span>
+          )}
         </label>
 
         <label>
@@ -473,9 +491,14 @@ function BannerForm({
           <input
             value={form.ctaHref}
             onChange={(e) => set("ctaHref", e.target.value)}
-            placeholder="/contact"
-            className={inputClass}
+            placeholder="e.g. /contact"
+            className={clsx(inputClass, ctaIncomplete && !hasCtaHref && "border-error")}
           />
+          {ctaIncomplete && !hasCtaHref && (
+            <span className="mt-1 block text-[0.65rem] text-error">
+              Where should the button go? Use a site path like /contact, or clear the button text.
+            </span>
+          )}
         </label>
 
         <label>
@@ -539,7 +562,7 @@ function BannerForm({
         <button
           type="button"
           onClick={onSave}
-          disabled={pending || !form.message.trim()}
+          disabled={pending || !form.message.trim() || ctaIncomplete}
           className="inline-flex items-center gap-1.5 rounded-lg bg-secondary-fixed px-4 py-2.5 text-sm font-semibold text-on-secondary-fixed transition-all hover:brightness-105 disabled:opacity-50"
         >
           {pending ? (
