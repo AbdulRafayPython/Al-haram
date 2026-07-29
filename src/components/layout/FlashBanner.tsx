@@ -178,7 +178,13 @@ export function FlashBanner({
         <Icon name="close" className="text-xl" />
       </button>
 
-      <div className={clsx("px-6 pb-6", banner.imageUrl ? "-mt-6 pt-0" : "pt-8")}>
+      {/* `relative z-10` is load-bearing: the image wrapper above is positioned,
+          and a positioned element paints over a static sibling regardless of DOM
+          order. Without it the badge — pulled up by -mt-6 to overlap the image
+          fade — renders *behind* the image and all you see is the badge dot. */}
+      <div
+        className={clsx("relative z-10 px-6 pb-6", banner.imageUrl ? "-mt-7 pt-0" : "pt-8")}
+      >
         {banner.label && (
           <span
             className={clsx(
