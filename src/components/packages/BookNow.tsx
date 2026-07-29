@@ -297,12 +297,12 @@ function ReservedStep({ booking, details }: { booking: BookingData; details: Vou
         Reference <span className="font-semibold text-on-surface">{details.reference}</span>
       </p>
 
-      <div className="mt-5 rounded-xl border border-secondary/40 bg-secondary-container/25 px-4 py-4 text-left">
+      <div className="mt-5 rounded-xl border border-secondary/40 bg-secondary-container/25 px-4 py-4 text-center">
         <p className="text-sm font-medium text-on-surface">{RESERVED_MESSAGE_EN}</p>
         <p
           lang="ur"
           dir="rtl"
-          className="mt-3 font-[family-name:var(--font-urdu)] text-[0.95rem] leading-[2.6] text-on-surface"
+          className="mt-3 text-center font-[family-name:var(--font-urdu)] text-[0.95rem] leading-[2.6] text-on-surface"
         >
           {RESERVED_MESSAGE_UR}
         </p>
