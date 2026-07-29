@@ -14,9 +14,6 @@ export const site = {
   whatsappHref: "https://wa.me/923390278667",
   address: "L 36, Block 3-A, Gulistan-e-Johar, Karachi, Sindh, Pakistan",
   hours: "11:00 AM – 10:00 PM (Sunday Closed)",
-  // Static payment QR shown after a booking is confirmed. Drop the real
-  // JazzCash/EasyPaisa/bank QR image at this path in /public.
-  paymentQrSrc: "/images/payment-qr.png",
   // Soft Talbiyah recitation for the floating Talbiyah panel. Never autoplays —
   // it only sounds after the visitor presses play. If the file is ever missing
   // the panel hides its sound control and shows the Talbiyah text only.

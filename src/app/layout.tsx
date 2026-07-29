@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
-import { Jost, Rubik, Satisfy, Playfair_Display, Amiri } from "next/font/google";
+import {
+  Jost,
+  Rubik,
+  Satisfy,
+  Playfair_Display,
+  Amiri,
+  Noto_Nastaliq_Urdu,
+} from "next/font/google";
 import "./globals.css";
 import { site } from "@/data/site";
 
@@ -37,6 +44,16 @@ const amiri = Amiri({
   display: "swap",
 });
 
+/* Nastaliq is the script Urdu readers expect — Naskh (Amiri) reads as Arabic to
+   them. Used only on the booking confirmation and voucher, so the font binary is
+   fetched only when that Urdu text actually renders. */
+const notoUrdu = Noto_Nastaliq_Urdu({
+  subsets: ["arabic"],
+  weight: ["400", "600"],
+  variable: "--font-noto-urdu",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: {
     default: `${site.name} — Umrah Packages, Hotels & Visas from Pakistan`,
@@ -55,7 +72,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${jost.variable} ${rubik.variable} ${satisfy.variable} ${playfair.variable} ${amiri.variable}`}
+      className={`${jost.variable} ${rubik.variable} ${satisfy.variable} ${playfair.variable} ${amiri.variable} ${notoUrdu.variable}`}
     >
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />

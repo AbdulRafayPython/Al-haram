@@ -1,12 +1,35 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "@/components/ui/Icon";
 import { clsx } from "@/lib/clsx";
 import { formatPkr } from "@/lib/format";
 import { site } from "@/data/site";
 import type { RoomType } from "@/data/types";
 import { createBookingAction } from "@/lib/actions/booking";
+import {
+  BookingVoucher,
+  RESERVED_MESSAGE_EN,
+  RESERVED_MESSAGE_UR,
+  type VoucherDetails,
+} from "./BookingVoucher";
+
+/** Everything the voucher prints beyond the pricing the modal already needs. */
+export interface BookingPackageDetails {
+  packageCode?: string;
+  departureCity?: string;
+  durationDays?: number;
+  returnDate?: string;
+  makkahHotel?: string;
+  madinahHotel?: string;
+  makkahNights?: number;
+  madinahNights?: number;
+  flightRoute?: string;
+  flightOutboundNo?: string;
+  flightInboundNo?: string;
+  baggage?: string | null;
+}
 
 export interface BookingData {
   packageId: string;
@@ -18,6 +41,8 @@ export interface BookingData {
   prices: Record<RoomType, number>;
   infantPrice: number;
   childNoBedPrice: number;
+  /** Optional richer package info — printed on the voucher only. */
+  details?: BookingPackageDetails;
 }
 
 interface Result {
@@ -141,7 +166,20 @@ function BookingModal({ booking, onClose }: { booking: BookingData; onClose: () 
         </button>
 
         {result ? (
-          <PaymentStep booking={booking} result={result} />
+          <ReservedStep
+            booking={booking}
+            details={{
+              reference: result.reference,
+              total: result.total,
+              name: name.trim(),
+              phone: phone.trim(),
+              roomType,
+              adults,
+              childNoBed,
+              infants,
+              unitPrice,
+            }}
+          />
         ) : (
           <>
             <p className="text-[0.7rem] font-semibold uppercase tracking-widest text-secondary">
@@ -222,9 +260,9 @@ function BookingModal({ booking, onClose }: { booking: BookingData; onClose: () 
               {pending ? (
                 <Icon name="progress_activity" className="animate-spin text-base" />
               ) : (
-                <Icon name="qr_code_2" className="text-base" />
+                <Icon name="event_available" className="text-base" />
               )}
-              Confirm & Get QR
+              Confirm Booking
             </button>
           </>
         )}
@@ -233,10 +271,20 @@ function BookingModal({ booking, onClose }: { booking: BookingData; onClose: () 
   );
 }
 
-function PaymentStep({ booking, result }: { booking: BookingData; result: Result }) {
-  const [qrOk, setQrOk] = useState(true);
+/**
+ * Post-confirmation step. No payment is taken here — the seat is reserved and
+ * the customer downloads their voucher and confirms with us on WhatsApp.
+ */
+function ReservedStep({ booking, details }: { booking: BookingData; details: VoucherDetails }) {
   const waHref = `${site.whatsappHref}?text=${encodeURIComponent(
-    `Booking ${result.reference} for ${booking.heading} — I've paid, sharing the receipt.`,
+    `Assalam-o-Alaikum, I have reserved a seat.\n` +
+      `Reference: ${details.reference}\n` +
+      `Package: ${booking.heading}\n` +
+      `Name: ${details.name}\n` +
+      `Travellers: ${details.adults} adult(s)` +
+      (details.childNoBed ? `, ${details.childNoBed} child (no bed)` : "") +
+      (details.infants ? `, ${details.infants} infant(s)` : "") +
+      `\nPlease confirm my booking.`,
   )}`;
 
   return (
@@ -244,44 +292,59 @@ function PaymentStep({ booking, result }: { booking: BookingData; result: Result
       <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-success/15 text-success">
         <Icon name="check_circle" className="text-3xl" />
       </span>
-      <h3 className="mt-3 font-[var(--font-heading)] text-xl text-on-surface">Booking reserved</h3>
+      <h3 className="mt-3 font-[var(--font-heading)] text-xl text-on-surface">Seat reserved</h3>
       <p className="mt-1 text-sm text-on-surface-variant">
-        Reference <span className="font-semibold text-on-surface">{result.reference}</span>
+        Reference <span className="font-semibold text-on-surface">{details.reference}</span>
       </p>
 
-      <div className="mx-auto mt-5 flex h-52 w-52 items-center justify-center overflow-hidden rounded-xl border border-outline-variant/50 bg-white p-2">
-        {qrOk ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={site.paymentQrSrc}
-            alt="Scan to pay"
-            className="h-full w-full object-contain"
-            onError={() => setQrOk(false)}
-          />
-        ) : (
-          <span className="px-4 text-center text-xs text-neutral-500">
-            Payment QR not configured yet. Please contact us to complete payment.
-          </span>
-        )}
+      <div className="mt-5 rounded-xl border border-secondary/40 bg-secondary-container/25 px-4 py-4 text-left">
+        <p className="text-sm font-medium text-on-surface">{RESERVED_MESSAGE_EN}</p>
+        <p
+          lang="ur"
+          dir="rtl"
+          className="mt-3 font-[family-name:var(--font-urdu)] text-[0.95rem] leading-[2.6] text-on-surface"
+        >
+          {RESERVED_MESSAGE_UR}
+        </p>
       </div>
 
-      <p className="mt-4 text-sm text-on-surface-variant">Amount to pay</p>
-      <p className="font-[var(--font-heading)] text-2xl tabular-nums text-secondary">
-        {formatPkr(result.total)}
-      </p>
-      <p className="mt-3 text-xs text-on-surface-variant">
-        Scan the QR to pay, then send us your receipt so we can confirm your seats.
-      </p>
+      <div className="mt-4 flex items-center justify-between rounded-lg border border-outline-variant/50 px-4 py-2.5">
+        <span className="text-xs uppercase tracking-wider text-on-surface-variant">Total</span>
+        <span className="font-[var(--font-heading)] text-lg tabular-nums text-secondary">
+          {formatPkr(details.total)}
+        </span>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => window.print()}
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-secondary-fixed px-6 py-3 text-sm font-semibold uppercase tracking-widest text-on-secondary-fixed transition-all hover:brightness-105"
+      >
+        <Icon name="download" className="text-base" />
+        Download PDF
+      </button>
 
       <a
         href={waHref}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-whatsapp px-6 py-3 text-sm font-semibold text-white transition-all hover:brightness-105"
+        className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-lg bg-whatsapp px-6 py-3 text-sm font-semibold text-white transition-all hover:brightness-105"
       >
         <Icon name="chat" className="text-base" />
-        Send payment receipt
+        Confirm on WhatsApp
       </a>
+
+      <p className="mt-3 text-xs text-on-surface-variant">
+        Choose &ldquo;Save as PDF&rdquo; in the print dialog to keep a copy.
+      </p>
+
+      {/* Portalled to <body> so `@media print` can isolate the voucher without
+          fighting the modal's fixed/overflow ancestors. Safe without a mounted
+          guard: this step only ever renders after a click, never during SSR. */}
+      {createPortal(
+        <BookingVoucher booking={booking} details={details} whatsappHref={waHref} />,
+        document.body,
+      )}
     </div>
   );
 }

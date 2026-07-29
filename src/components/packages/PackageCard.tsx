@@ -320,6 +320,21 @@ export function PackageCard({ pkg, packageNumber }: { pkg: UmrahPackage; package
                 prices: amountFor,
                 infantPrice: pricing.infant,
                 childNoBedPrice: pricing.childNoBed,
+                // Printed on the booking voucher only.
+                details: {
+                  packageCode: pkg.packageCode,
+                  departureCity: pkg.departureCity,
+                  durationDays: pkg.durationDays,
+                  returnDate: pkg.returnDate,
+                  makkahHotel: pkg.makkahHotel,
+                  madinahHotel: pkg.madinahHotel,
+                  makkahNights: pkg.makkahNights,
+                  madinahNights: pkg.madinahNights,
+                  flightRoute: pkg.flight?.route,
+                  flightOutboundNo: pkg.flight?.outboundNo,
+                  flightInboundNo: pkg.flight?.inboundNo,
+                  baggage: pkg.baggage,
+                },
               }}
             />
           </div>
